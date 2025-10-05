@@ -1993,3 +1993,137 @@ async function exportLargeDataInChunks(data, baseFileName) {
 
 // Initialize the page when loaded
 document.addEventListener('DOMContentLoaded', initPage);
+
+
+
+
+
+
+
+
+
+// Google Drive Status Update Function
+function updateGoogleDriveStatus() {
+    const statusElement = document.getElementById('driveStatus');
+    const backupBtn = document.getElementById('backupDriveBtn');
+    const restoreBtn = document.getElementById('restoreDriveBtn');
+    
+    if (!statusElement) return;
+    
+    const isConnected = localStorage.getItem('googleDriveConnected') === 'true';
+    
+    if (isConnected) {
+        statusElement.innerHTML = '<span style="color: #34a853;">✅ Connected to Google Drive</span>';
+        statusElement.innerHTML += '<br><small>You can now backup your data</small>';
+        
+        if (backupBtn) backupBtn.disabled = false;
+        if (restoreBtn) restoreBtn.disabled = false;
+    } else {
+        statusElement.innerHTML = '<span style="color: #ea4335;">❌ Not Connected to Google Drive</span>';
+        statusElement.innerHTML += '<br><small>Click "Connect Google Drive" to start</small>';
+        
+        if (backupBtn) backupBtn.disabled = true;
+        if (restoreBtn) restoreBtn.disabled = true;
+    }
+}
+
+// Initialize Google Drive Status on Page Load
+document.addEventListener('DOMContentLoaded', function() {
+    // Pehle status update karein
+    updateGoogleDriveStatus();
+    
+    // Har 5 second baad status check karein
+    setInterval(updateGoogleDriveStatus, 5000);
+});
+
+// Enhanced Backup Function with Better UI
+async function backupToGoogleDrive() {
+    const backupBtn = document.getElementById('backupDriveBtn');
+    const originalText = backupBtn.innerHTML;
+    
+    try {
+        // Loading state
+        backupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Backup...';
+        backupBtn.disabled = true;
+        
+        if (!googleCloudManager.isConnected()) {
+            throw new Error('Please connect to Google Drive first');
+        }
+        
+        // Show notification
+        showNotification('☁️ Creating Google Drive backup...', 'info');
+        
+        const backupData = {
+            metadata: {
+                type: "GOOGLE_DRIVE_BACKUP",
+                created: new Date().toISOString(),
+                totalItems: inventoryItems.length,
+                system: "ALISHAN_INVENTORY",
+                version: "2.0"
+            },
+            inventory: inventoryItems
+        };
+        
+        // Generate file name
+        const date = new Date();
+        const fileName = `ALISHAN_Backup_${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}.json`;
+        
+        // Upload to Google Drive
+        const result = await googleCloudManager.uploadToDrive(
+            fileName,
+            JSON.stringify(backupData, null, 2),
+            'application/json'
+        );
+        
+        showNotification(`✅ Backup uploaded to Google Drive!`, 'success');
+        
+        // Success state
+        backupBtn.innerHTML = '<i class="fas fa-check"></i> Backup Successful!';
+        setTimeout(() => {
+            backupBtn.innerHTML = originalText;
+            backupBtn.disabled = false;
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Google Drive backup error:', error);
+        showNotification('❌ Backup failed: ' + error.message, 'error');
+        
+        // Error state
+        backupBtn.innerHTML = '<i class="fas fa-times"></i> Backup Failed';
+        setTimeout(() => {
+            backupBtn.innerHTML = originalText;
+            backupBtn.disabled = false;
+        }, 2000);
+    }
+}
+
+// Enhanced Connect Function
+async function connectGoogleDrive() {
+    const connectBtn = document.getElementById('connectDriveBtn');
+    const originalText = connectBtn.innerHTML;
+    
+    try {
+        connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+        connectBtn.disabled = true;
+        
+        showNotification('🔗 Connecting to Google Drive...', 'info');
+        
+        const success = await googleCloudManager.authenticate();
+        if (success) {
+            showNotification('✅ Successfully connected to Google Drive!', 'success');
+            updateGoogleDriveStatus();
+        }
+        
+    } catch (error) {
+        console.error('Google Drive connection error:', error);
+        showNotification('❌ Connection failed: ' + error.message, 'error');
+    } finally {
+        connectBtn.innerHTML = originalText;
+        connectBtn.disabled = false;
+    }
+}
+
+
+
+
+
