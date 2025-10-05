@@ -5,8 +5,9 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Middleware - YEH LINE ADD KAREN
 app.use(cors());
+
 app.use(express.json());
 
 // Google Config API - Yeh API keys frontend ko dega
@@ -14,13 +15,30 @@ app.get('/api/google-config', (req, res) => {
   try {
     // Security check - sirf trusted domains se allow karein
     const allowedOrigins = [
-      'http://localhost',
-      'https://yourusername.github.io'
+      'http://localhost:3000',
+      'http://127.0.0.1:3000', 
+      'http://localhost:5500',
+      'http://127.0.0.1:5500',
+      'https://yourusername.github.io',
+      'https://alishaninventory.netlify.app/',  // ✅ APNA NETLIFY URL YAHAN DALEN
+      'https://*.netlify.app'             // ✅ SARE NETLIFY SITES
     ];
     
     const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
+    
+    // Allow karein agar origin allowedOrigins mein hai
+    if (origin) {
+      const isAllowed = allowedOrigins.some(allowedOrigin => {
+        if (allowedOrigin.includes('*')) {
+          // Wildcard match for netlify
+          return origin.includes('netlify.app');
+        }
+        return origin === allowedOrigin;
+      });
+      
+      if (isAllowed) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
     }
     
     // API keys environment variables se le rahe hain
