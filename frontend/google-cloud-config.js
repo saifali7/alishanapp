@@ -18,7 +18,7 @@ class GoogleCloudManager {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             return 'http://localhost:3000'; // Local backend
         } else {
-            return 'https://alishanapp.onrender.com/'; // PRODUCTION BACKEND URL
+            return 'https://alishanapp.onrender.com'; // PRODUCTION BACKEND URL
         }
     }
 
