@@ -562,6 +562,44 @@
         </div>
     </div>
 
+
+
+
+
+            <!-- Yeh code kahi bhi add karein - header ke paas ya filters ke baad -->
+            <div class="google-drive-section" style="text-align: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 10px;">
+                <h3 style="color: #4361ee; margin-bottom: 15px;">
+                    <i class="fab fa-google-drive"></i> Google Drive Backup
+                </h3>
+                
+                <div class="drive-buttons">
+                    <button class="btn btn-connect" onclick="connectGoogleDrive()" id="connectDriveBtn">
+                        <i class="fab fa-google-drive"></i> Connect Google Drive
+                    </button>
+                    
+                    <button class="btn btn-backup" onclick="backupToGoogleDrive()" id="backupDriveBtn">
+                        <i class="fas fa-cloud-upload-alt"></i> Backup to Google Drive
+                    </button>
+                    
+                    <button class="btn btn-restore" onclick="restoreFromGoogleDrive()" id="restoreDriveBtn">
+                        <i class="fas fa-cloud-download-alt"></i> Restore from Drive
+                    </button>
+                </div>
+                
+                <div id="driveStatus" style="margin-top: 10px; font-size: 14px; color: #666;">
+                    Status: Not Connected
+                </div>
+            </div>
+            
+
+
+
+
+
+
+
+
+
     <!-- Notification Container -->
     <div class="notification-container" id="notificationContainer"></div>
     
