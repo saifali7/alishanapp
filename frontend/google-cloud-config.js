@@ -9,7 +9,9 @@ class GoogleCloudManager {
         this.gisInited = false;
         this.tokenClient = null;
         this.accessToken = null;
-        this.backendUrl = this.getBackendUrl();
+        this.backendUrl = 'https://alishanapp.onrender.com';  // ← YEH LINE CHANGE KI
+        this.isProduction = true;                             // ← YEH LINE ADD KI
+        console.log('🔧 Google Cloud Manager initialized with:', this.backendUrl); // ← YEH BHI ADD KI
         this.isInitialized = false;
     }
 
