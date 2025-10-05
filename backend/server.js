@@ -20,7 +20,10 @@ app.get('/api/google-config', (req, res) => {
       'http://localhost:5500',
       'http://127.0.0.1:5500',
       'https://yourusername.github.io',
-      'https://alishaninventory.netlify.app',  // ✅ APNA NETLIFY URL YAHAN DALE           // ✅ SARE NETLIFY SITES
+      'https://alishaninventory.netlify.app',  // ✅ APNA NETLIFY URL YAHAN DALE          
+      'https://*.netlify.app',
+
+ // ✅ SARE NETLIFY SITES
     ];
     
     const origin = req.headers.origin;
