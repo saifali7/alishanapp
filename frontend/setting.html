@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALISHAN - Advanced Settings Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <link rel="stylesheet" href="setting.css">
+</head>
+<body class="theme-light-default">
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="breadcrumb">
+                    <a href="index.html">Dashboard</a>
+                    <span class="separator">/</span>
+                    <span>Settings</span>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="globalSearch" placeholder="Search settings...">
+                </div>
+                
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <div class="collaboration-status">
+                    <i class="fas fa-circle" style="font-size: 8px;"></i>
+                    <span>Online</span>
+                </div>
+                
+                <div class="profile-section">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">Admin User</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-tshirt"></i>
+                    </div>
+                    <span>ALISHAN</span>
+                </div>
+            </div>
+
+            <nav class="nav-section">
+                <div class="nav-title">Main Settings</div>
+                <ul class="nav-links">
+                    <li><a href="#" class="nav-link active" data-section="dashboard">
+                        <i class="fas fa-th-large nav-icon"></i>
+                        Dashboard
+                    </a></li>
+                    <li><a href="#" class="nav-link" data-section="general">
+                        <i class="fas fa-cog nav-icon"></i>
+                        General
+                    </a></li>
+                    <li><a href="#" class="nav-link" data-section="appearance">
+                        <i class="fas fa-paint-brush nav-icon"></i>
+                        Appearance
+                    </a></li>
+                    <li><a href="#" class="nav-link" data-section="users">
+                        <i class="fas fa-users nav-icon"></i>
+                        Users
+                    </a></li>
+                </ul>
+            </nav>
+
+            <nav class="nav-section">
+                <div class="nav-title">Advanced</div>
+                <ul class="nav-links">
+                    <li><a href="#" class="nav-link" data-section="backup">
+                        <i class="fas fa-database nav-icon"></i>
+                        Backup & Restore
+                    </a></li>
+                    <li><a href="#" class="nav-link" data-section="notifications">
+                        <i class="fas fa-bell nav-icon"></i>
+                        Notifications
+                    </a></li>
+                    <li><a href="#" class="nav-link" data-section="import-export">
+                        <i class="fas fa-file-export nav-icon"></i>
+                        Import/Export
+                    </a></li>
+                    <li><a href="#" class="nav-link" data-section="security">
+                        <i class="fas fa-shield-alt nav-icon"></i>
+                        Security
+                    </a></li>
+                    <li><a href="#" class="nav-link" data-section="audit">
+                        <i class="fas fa-history nav-icon"></i>
+                        Audit Log
+                    </a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="settings-section active">
+                <div class="dashboard-header" style="margin-bottom: 2rem;">
+                    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">Settings Dashboard</h1>
+                    <p style="color: var(--text-secondary);">Manage your store settings and preferences</p>
+                </div>
+
+                <!-- AI Suggestions -->
+                <div class="ai-suggestions">
+                    <div class="suggestion-title">
+                        <i class="fas fa-robot"></i>
+                        AI Suggestions
+                    </div>
+                    <div class="suggestion-text" id="aiSuggestionText">
+                        Based on your usage patterns, we recommend optimizing your backup schedule and enabling two-factor authentication for enhanced security.
+                    </div>
+                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);" onclick="applyAISuggestions()">
+                        <i class="fas fa-magic"></i>
+                        Apply Suggestions
+                    </button>
+                </div>
+
+                <!-- Undo/Redo Controls -->
+                <div class="undo-redo-controls">
+                    <button class="btn btn-secondary btn-sm" onclick="settingsManager.undo()" id="undoBtn">
+                        <i class="fas fa-undo"></i> Undo
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="settingsManager.redo()" id="redoBtn">
+                        <i class="fas fa-redo"></i> Redo
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="settingsManager.saveSettings()">
+                        <i class="fas fa-save"></i> Save All
+                    </button>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-bolt"></i> Quick Actions</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <div class="action-btn" onclick="createBackup()">
+                                <div class="action-icon" style="background: var(--gradient-success);">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <span class="action-text">Backup Now</span>
+                            </div>
+                            <div class="action-btn" onclick="exportData()">
+                                <div class="action-icon" style="background: var(--gradient-warning);">
+                                    <i class="fas fa-file-export"></i>
+                                </div>
+                                <span class="action-text">Export Data</span>
+                            </div>
+                            <div class="action-btn" onclick="showAddUserModal()">
+                                <div class="action-icon" style="background: var(--gradient-primary);">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                                <span class="action-text">Add User</span>
+                            </div>
+                            <div class="action-btn" onclick="toggleTheme()">
+                                <div class="action-icon" style="background: var(--gradient-dark);">
+                                    <i class="fas fa-palette"></i>
+                                </div>
+                                <span class="action-text">Change Theme</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Health -->
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-heart-pulse"></i> System Health</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value">95%</div>
+                                    <div class="stat-label">System Uptime</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">2.1GB</div>
+                                    <div class="stat-label">Storage Used</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">3</div>
+                                    <div class="stat-label">Active Users</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">24h</div>
+                                    <div class="stat-label">Last Backup</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-history"></i> Recent Activity</h2>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0;">
+                                    <div style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 500;">Settings updated</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">2 hours ago</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0;">
+                                    <div style="width: 8px; height: 8px; background: var(--info); border-radius: 50%;"></div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 500;">New user added</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">5 hours ago</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0;">
+                                    <div style="width: 8px; height: 8px; background: var(--warning); border-radius: 50%;"></div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 500;">Backup completed</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">1 day ago</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Profiles -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-user-cog"></i> Settings Profiles</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="profile-cards">
+                            <div class="profile-card active" onclick="applyProfile('beginner')">
+                                <div class="profile-icon">
+                                    <i class="fas fa-user-graduate"></i>
+                                </div>
+                                <h3 style="margin-bottom: 0.5rem;">Beginner Mode</h3>
+                                <p style="color: var(--text-secondary); font-size: 0.875rem;">Simplified interface with basic features</p>
+                            </div>
+                            <div class="profile-card" onclick="applyProfile('advanced')">
+                                <div class="profile-icon">
+                                    <i class="fas fa-user-cog"></i>
+                                </div>
+                                <h3 style="margin-bottom: 0.5rem;">Advanced Mode</h3>
+                                <p style="color: var(--text-secondary); font-size: 0.875rem;">Full access to all features</p>
+                            </div>
+                            <div class="profile-card" onclick="applyProfile('performance')">
+                                <div class="profile-icon">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                </div>
+                                <h3 style="margin-bottom: 0.5rem;">Performance Mode</h3>
+                                <p style="color: var(--text-secondary); font-size: 0.875rem;">Optimized for speed</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- General Settings Section -->
+            <div id="general" class="settings-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-building"></i> Business Information</h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- Logo Upload -->
+                        <div class="logo-upload">
+                            <div class="logo-preview">
+                                <img id="logoPreview" src="" alt="Business Logo">
+                                <div class="logo-placeholder">
+                                    <i class="fas fa-image"></i>
+                                    <p>No logo uploaded</p>
+                                    <p class="logo-dimensions">Recommended: 300×300 pixels</p>
+                                </div>
+                            </div>
+                            <div class="logo-actions">
+                                <button class="btn btn-sm" onclick="document.getElementById('logoUpload').click()">
+                                    <i class="fas fa-upload"></i> Upload Logo
+                                </button>
+                                <input type="file" id="logoUpload" accept="image/*" style="display: none;" onchange="handleLogoUpload(this.files[0])">
+                                <button class="btn btn-secondary btn-sm" id="cropLogoBtn" style="display: none;" onclick="showCropperModal()">
+                                    <i class="fas fa-crop"></i> Crop
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Business Name</label>
+                            <input type="text" class="form-control" id="businessName" value="ALISHAN Garments" oninput="validateBusinessName(this.value)">
+                            <div class="form-text">Your business name as it appears to customers</div>
+                            <div id="businessNameError" style="color: var(--danger); font-size: 0.875rem; margin-top: 0.25rem; display: none;"></div>
+                        </div>
+                        
+                        <!-- Currency Selector -->
+                        <div class="form-group">
+                            <label class="form-label">Currency</label>
+                            <div class="currency-selector" id="currencySelector">
+                                <!-- Currencies will be populated by JavaScript -->
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="fetchRealTimeExchangeRates()" id="refreshRatesBtn" style="margin-top: 0.5rem;">
+                                <i class="fas fa-sync-alt"></i> Refresh Exchange Rates
+                                <span id="lastUpdated" class="rate-status"></span>
+                            </button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Business Address</label>
+                            <textarea class="form-control" id="businessAddress" rows="3">123 Garment Street, Fashion District, Mumbai, India</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-table"></i> Display Preferences</h2>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Date Format</label>
+                                <select class="form-control" id="dateFormat">
+                                    <option value="dd-mm-yyyy" selected>DD-MM-YYYY</option>
+                                    <option value="mm-dd-yyyy">MM-DD-YYYY</option>
+                                    <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Items Per Page</label>
+                                <select class="form-control" id="itemsPerPage">
+                                    <option value="10">10 items</option>
+                                    <option value="20">20 items</option>
+                                    <option value="50" selected>50 items</option>
+                                    <option value="100">100 items</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn" onclick="saveGeneralSettings()">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                        <span id="generalSaveIndicator" class="save-indicator">
+                            <i class="fas fa-check-circle"></i> Saved
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appearance Settings Section -->
+            <div id="appearance" class="settings-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-paint-brush"></i> Appearance Settings</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-palette"></i> Theme & Colors
+                            </h3>
+                            
+                            <!-- Theme Selector -->
+                            <div class="theme-selector" id="themeSelector">
+                                <!-- Theme options will be populated by JavaScript -->
+                            </div>
+                            
+                            <div class="form-grid" style="margin-top: 1.5rem;">
+                                <div class="form-group">
+                                    <label class="form-label" for="primaryColor">Primary Color</label>
+                                    <input type="color" class="form-control" id="primaryColor" value="#4361ee">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="secondaryColor">Secondary Color</label>
+                                    <input type="color" class="form-control" id="secondaryColor" value="#3f37c9">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-globe"></i> Language & Display
+                            </h3>
+                            <div class="language-selector" id="languageSelector">
+                                <!-- Language options will be populated by JavaScript -->
+                            </div>
+                            
+                            <div class="form-grid" style="margin-top: 1.5rem;">
+                                <div class="form-group">
+                                    <label>Compact Mode</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="compactMode">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Reduce padding for more content on screen</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>High Contrast Mode</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="highContrastMode">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Increase contrast for better readability</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn" onclick="saveAppearanceSettings()">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                        <span id="appearanceSaveIndicator" class="save-indicator">
+                            <i class="fas fa-check-circle"></i> Saved
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users" class="settings-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-users"></i> User Management</h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- Bulk Operations -->
+                        <div class="bulk-actions">
+                            <button class="btn btn-sm" onclick="selectAllUsers()">
+                                <i class="fas fa-check-square"></i> Select All
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="deleteSelectedUsers()">
+                                <i class="fas fa-trash"></i> Delete Selected
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="exportSelectedUsers()">
+                                <i class="fas fa-file-export"></i> Export Selected
+                            </button>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                            <button class="btn" onclick="showAddUserModal()">
+                                <i class="fas fa-user-plus"></i> Add User
+                            </button>
+                            <button class="btn btn-secondary" onclick="showBulkImportModal()">
+                                <i class="fas fa-file-import"></i> Bulk Import
+                            </button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Current Users</label>
+                            <div class="user-list" id="userList">
+                                <!-- Users will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Permission Management -->
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-shield-alt"></i> Role Permissions
+                            </h3>
+                            <div class="permission-matrix" id="permissionMatrix">
+                                <!-- Permissions will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup & Restore Section -->
+            <div id="backup" class="settings-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-database"></i> Backup & Restore</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-history"></i> Auto Backup Settings
+                            </h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div class="form-group">
+                                    <label style="display: block; margin-bottom: 0.5rem;">Auto Backup</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="autoBackup" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Automatically backup data every week</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="backupFrequency">Backup Frequency</label>
+                                    <select class="form-control" id="backupFrequency">
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly" selected>Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Backup Calendar -->
+                            <div class="form-group">
+                                <label class="form-label">Backup Schedule</label>
+                                <div class="backup-calendar" id="backupCalendar">
+                                    <div class="calendar-header">
+                                        <button class="btn btn-sm" id="prevMonth"><i class="fas fa-chevron-left"></i></button>
+                                        <span id="calendarMonth">November 2023</span>
+                                        <button class="btn btn-sm" id="nextMonth"><i class="fas fa-chevron-right"></i></button>
+                                    </div>
+                                    <div class="calendar-day">Sun</div>
+                                    <div class="calendar-day">Mon</div>
+                                    <div class="calendar-day">Tue</div>
+                                    <div class="calendar-day">Wed</div>
+                                    <div class="calendar-day">Thu</div>
+                                    <div class="calendar-day">Fri</div>
+                                    <div class="calendar-day">Sat</div>
+                                    <!-- Calendar dates will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-cogs"></i> Manual Operations
+                            </h3>
+                            <div class="form-group">
+                                <button class="btn" onclick="createBackup()"><i class="fas fa-plus"></i> Create Backup Now</button>
+                                <button class="btn btn-secondary" onclick="confirmRestoreBackup()"><i class="fas fa-undo"></i> Restore from Backup</button>
+                                <button class="btn" onclick="showCloudBackupModal()"><i class="fas fa-cloud"></i> Cloud Backup</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Storage Usage -->
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-hard-drive"></i> Storage Usage
+                            </h3>
+                            <div class="storage-usage">
+                                <div class="usage-bar">
+                                    <div class="usage-progress" id="storageProgressBar" style="width: 0%;"></div>
+                                </div>
+                                <div class="usage-stats">
+                                    <span id="storageUsageText">Calculating...</span>
+                                    <span id="storagePercentage">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Backup Timeline -->
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-clock"></i> Recent Backups
+                            </h3>
+                            <div class="backup-timeline" id="backupTimeline">
+                                <!-- Backup items will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div id="notifications" class="settings-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-bell"></i> Notification Settings</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-toggle-on"></i> Notification Preferences
+                            </h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Low Stock Alerts</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="lowStockAlerts" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Get notified when inventory is low</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Daily Reports</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="dailyReports" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Receive daily sales reports</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>New Order Alerts</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="newOrderAlerts" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Get notified for new orders</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Backup Reminders</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="backupReminders">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Remind me to backup data</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-broadcast-tower"></i> Notification Channels
+                            </h3>
+                            <div class="notification-channels">
+                                <div class="channel-card">
+                                    <i class="fas fa-envelope"></i>
+                                    <h4>Email</h4>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="emailNotifications" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="channel-card">
+                                    <i class="fas fa-sms"></i>
+                                    <h4>SMS</h4>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="smsNotifications">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="channel-card">
+                                    <i class="fas fa-bell"></i>
+                                    <h4>Browser</h4>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="browserNotifications" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="channel-card">
+                                    <i class="fas fa-mobile-alt"></i>
+                                    <h4>Push</h4>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="pushNotifications">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-envelope"></i> Notification Delivery
+                            </h3>
+                            <div class="form-group">
+                                <label class="form-label" for="notificationEmail">Notification Email</label>
+                                <input type="email" class="form-control" id="notificationEmail" value="admin@alishan.com">
+                                <div class="form-text error-message" id="emailError" style="color: var(--danger); display: none;">
+                                    Please enter a valid email address
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="quietHours">Quiet Hours</label>
+                                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center;">
+                                    <select class="form-control" id="quietStart">
+                                        <option value="22:00">10:00 PM</option>
+                                        <option value="23:00">11:00 PM</option>
+                                        <option value="00:00">12:00 AM</option>
+                                    </select>
+                                    <span>to</span>
+                                    <select class="form-control" id="quietEnd">
+                                        <option value="06:00">6:00 AM</option>
+                                        <option value="07:00">7:00 AM</option>
+                                        <option value="08:00">8:00 AM</option>
+                                    </select>
+                                </div>
+                                <div class="form-text">No notifications will be sent during these hours</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn" onclick="saveNotificationSettings()">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                        <span id="notificationSaveIndicator" class="save-indicator">
+                            <i class="fas fa-check-circle"></i> Saved
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import/Export Section -->
+            <div id="import-export" class="settings-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-file-export"></i> Import/Export Data</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-file-export"></i> Export Data
+                            </h3>
+                            <p style="margin-bottom: 1rem; color: var(--text-secondary);">Export your inventory data to various formats</p>
+                            
+                            <div class="import-export-options">
+                                <div class="option-card" onclick="showExportOptions('inventory')">
+                                    <i class="fas fa-boxes"></i>
+                                    <h4>Inventory</h4>
+                                    <p>Export product catalog and stock levels</p>
+                                </div>
+                                <div class="option-card" onclick="showExportOptions('sales')">
+                                    <i class="fas fa-chart-line"></i>
+                                    <h4>Sales Data</h4>
+                                    <p>Export transaction history and reports</p>
+                                </div>
+                                <div class="option-card" onclick="showExportOptions('customers')">
+                                    <i class="fas fa-users"></i>
+                                    <h4>Customer Data</h4>
+                                    <p>Export customer information and orders</p>
+                                </div>
+                                <div class="option-card" onclick="showExportOptions('settings')">
+                                    <i class="fas fa-cog"></i>
+                                    <h4>Settings</h4>
+                                    <p>Export system configuration</p>
+                                </div>
+                            </div>
+                            
+                            <div id="exportOptions" style="display: none; margin-top: 1.5rem;">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label" for="exportDateRange">Date Range</label>
+                                        <select class="form-control" id="exportDateRange">
+                                            <option value="all">All Data</option>
+                                            <option value="last_week">Last 7 Days</option>
+                                            <option value="last_month">Last 30 Days</option>
+                                            <option value="custom">Custom Range</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="exportFormat">Format</label>
+                                        <select class="form-control" id="exportFormat">
+                                            <option value="csv">CSV</option>
+                                            <option value="excel">Excel</option>
+                                            <option value="json">JSON</option>
+                                            <option value="pdf">PDF</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <button class="btn" onclick="exportData()">
+                                        <i class="fas fa-file-export"></i> Export Data
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="saveExportTemplate()">
+                                        <i class="fas fa-save"></i> Save as Template
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-file-import"></i> Import Data
+                            </h3>
+                            <p style="margin-bottom: 1rem; color: var(--text-secondary);">Import inventory data from files</p>
+                            
+                            <div class="import-export-options">
+                                <div class="option-card" onclick="showImportOptions('inventory')">
+                                    <i class="fas fa-boxes"></i>
+                                    <h4>Inventory</h4>
+                                    <p>Import product catalog and stock levels</p>
+                                </div>
+                                <div class="option-card" onclick="showImportOptions('sales')">
+                                    <i class="fas fa-chart-line"></i>
+                                    <h4>Sales Data</h4>
+                                    <p>Import transaction history</p>
+                                </div>
+                                <div class="option-card" onclick="showImportOptions('customers')">
+                                    <i class="fas fa-users"></i>
+                                    <h4>Customer Data</h4>
+                                    <p>Import customer information</p>
+                                </div>
+                                <div class="option-card" onclick="showImportOptions('settings')">
+                                    <i class="fas fa-cog"></i>
+                                    <h4>Settings</h4>
+                                    <p>Import system configuration</p>
+                                </div>
+                            </div>
+                            
+                            <div id="importOptions" style="display: none; margin-top: 1.5rem;">
+                                <div class="form-group">
+                                    <label class="form-label" for="importTemplate">Use Template</label>
+                                    <select class="form-control" id="importTemplate">
+                                        <option value="">Select Template</option>
+                                        <option value="template1">Full Inventory Import</option>
+                                        <option value="template2">Sales Data Only</option>
+                                        <option value="template3">Customer Data</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="importFile">Select File</label>
+                                    <input type="file" class="form-control" id="importFile" accept=".csv,.xlsx,.json">
+                                    <button class="btn btn-sm" onclick="previewImportData()" style="margin-top: 10px;">
+                                        <i class="fas fa-eye"></i> Preview Data
+                                    </button>
+                                </div>
+                                
+                                <!-- Import Preview -->
+                                <div class="import-preview" id="importPreview" style="display: none;">
+                                    <table class="preview-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Product ID</th>
+                                                <th>Name</th>
+                                                <th>Category</th>
+                                                <th>Quantity</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>P1001</td>
+                                                <td>Men's T-Shirt</td>
+                                                <td>Clothing</td>
+                                                <td>50</td>
+                                            </tr>
+                                            <tr>
+                                                <td>P1002</td>
+                                                <td>Women's Jeans</td>
+                                                <td>Clothing</td>
+                                                <td>30</td>
+                                            </tr>
+                                            <tr>
+                                                <td>P1003</td>
+                                                <td>Kids' Jacket</td>
+                                                <td>Clothing</td>
+                                                <td>25</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="importStrategy">Import Strategy</label>
+                                    <select class="form-control" id="importStrategy">
+                                        <option value="add_new">Add New Items Only</option>
+                                        <option value="update_existing">Update Existing Items</option>
+                                        <option value="replace_all">Replace All Data</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <button class="btn" onclick="importData()">
+                                        <i class="fas fa-file-import"></i> Import Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="toast info" style="margin-top: 1.5rem;">
+                            <i class="fas fa-info-circle"></i>
+                            <div>
+                                <strong>Note:</strong> Always backup your data before importing new data to prevent data loss.
+                            </div>
+                        </div>
+                        
+                        <!-- Import History -->
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-history"></i> Import History
+                            </h3>
+                            <div class="backup-timeline" id="importHistory">
+                                <!-- Import history will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Section -->
+            <div id="security" class="settings-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-shield-alt"></i> Security Settings</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-lock"></i> Authentication
+                            </h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Two-Factor Authentication</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="twoFactorAuth">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Add an extra layer of security to your account</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Session Timeout</label>
+                                    <select class="form-control" id="sessionTimeout">
+                                        <option value="15">15 minutes</option>
+                                        <option value="30">30 minutes</option>
+                                        <option value="60" selected>1 hour</option>
+                                        <option value="120">2 hours</option>
+                                        <option value="240">4 hours</option>
+                                    </select>
+                                    <div class="form-text">Automatically log out after inactivity</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-user-shield"></i> Password Policy
+                            </h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="minPasswordLength">Minimum Password Length</label>
+                                    <input type="number" class="form-control" id="minPasswordLength" value="8" min="6" max="20">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="passwordExpiry">Password Expiry (days)</label>
+                                    <input type="number" class="form-control" id="passwordExpiry" value="90" min="30" max="365">
+                                </div>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Require Special Characters</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="requireSpecialChars" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Require Numbers</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="requireNumbers" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Require Uppercase</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="requireUppercase">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-network-wired"></i> Network Security
+                            </h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>IP Whitelisting</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="ipWhitelisting">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Restrict access to specific IP addresses</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>API Rate Limiting</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="apiRateLimiting" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <div class="form-text">Limit API requests to prevent abuse</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="allowedIPs">Allowed IP Addresses</label>
+                                <textarea class="form-control" id="allowedIPs" rows="3" placeholder="Enter one IP address per line&#10;Example:&#10;192.168.1.1&#10;10.0.0.50"></textarea>
+                                <div class="form-text">Leave empty to allow all IP addresses</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn" onclick="saveSecuritySettings()">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                        <span id="securitySaveIndicator" class="save-indicator">
+                            <i class="fas fa-check-circle"></i> Saved
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Log Section -->
+            <div id="audit" class="settings-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-history"></i> Audit Log</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-filter"></i> Filter Logs
+                            </h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="auditDateRange">Date Range</label>
+                                    <select class="form-control" id="auditDateRange">
+                                        <option value="today">Today</option>
+                                        <option value="yesterday">Yesterday</option>
+                                        <option value="last_week" selected>Last 7 Days</option>
+                                        <option value="last_month">Last 30 Days</option>
+                                        <option value="custom">Custom Range</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="auditUser">User</label>
+                                    <select class="form-control" id="auditUser">
+                                        <option value="">All Users</option>
+                                        <option value="admin">Admin User</option>
+                                        <option value="manager">Manager User</option>
+                                        <option value="staff">Staff User</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="auditAction">Action Type</label>
+                                    <select class="form-control" id="auditAction">
+                                        <option value="">All Actions</option>
+                                        <option value="login">Login</option>
+                                        <option value="logout">Logout</option>
+                                        <option value="create">Create</option>
+                                        <option value="update">Update</option>
+                                        <option value="delete">Delete</option>
+                                        <option value="export">Export</option>
+                                        <option value="import">Import</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-sm" onclick="filterAuditLogs()">
+                                <i class="fas fa-filter"></i> Apply Filters
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearAuditFilters()">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </button>
+                        </div>
+                        
+                        <div class="section-group">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-list"></i> Recent Activities
+                            </h3>
+                            <div class="audit-log" id="auditLog">
+                                <!-- Audit items will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button class="btn btn-secondary" onclick="exportAuditLog()">
+                                <i class="fas fa-file-export"></i> Export Audit Log
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearAuditLog()">
+                                <i class="fas fa-trash"></i> Clear Log
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Add User Modal -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New User</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="userEmail">Email Address</label>
+                    <input type="email" class="form-control" id="userEmail" placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="userName">Full Name</label>
+                    <input type="text" class="form-control" id="userName" placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="userRole">Role</label>
+                    <select class="form-control" id="userRole">
+                        <option value="admin">Administrator</option>
+                        <option value="manager">Manager</option>
+                        <option value="staff" selected>Staff</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="userPassword">Password</label>
+                    <input type="password" class="form-control" id="userPassword" placeholder="Enter password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="confirmPassword">Confirm Password</label>
+                    <input type="password" class="form-control" id="confirmPassword" placeholder="Confirm password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="userAvatar">Profile Picture</label>
+                    <input type="file" class="form-control" id="userAvatar" accept="image/*">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn" id="modalActionBtn" onclick="addUser()">Add User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cropper Modal -->
+    <div class="modal-overlay" id="cropperModal">
+        <div class="modal cropper-modal">
+            <div class="modal-header">
+                <h3>Crop Logo</h3>
+                <button class="modal-close" onclick="closeCropperModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="cropper-container">
+                    <img id="cropperImage" src="" alt="Crop Preview">
+                </div>
+                <div class="cropper-actions">
+                    <button class="btn btn-secondary" onclick="rotateImage(-90)">
+                        <i class="fas fa-undo"></i> Rotate Left
+                    </button>
+                    <button class="btn btn-secondary" onclick="rotateImage(90)">
+                        <i class="fas fa-redo"></i> Rotate Right
+                    </button>
+                    <button class="btn" onclick="cropImage()">
+                        <i class="fas fa-crop"></i> Crop Image
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloud Backup Modal -->
+    <div class="modal-overlay" id="cloudBackupModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Cloud Backup Settings</h3>
+                <button class="modal-close" onclick="closeCloudBackupModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Cloud Service</label>
+                    <select class="form-control" id="cloudService">
+                        <option value="google">Google Drive</option>
+                        <option value="dropbox">Dropbox</option>
+                        <option value="onedrive">OneDrive</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Auto Sync</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="autoSync">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div class="form-text">Automatically sync backups to cloud</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="syncFrequency">Sync Frequency</label>
+                    <select class="form-control" id="syncFrequency">
+                        <option value="daily">Daily</option>
+                        <option value="weekly" selected>Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button class="btn">
+                        <i class="fab fa-google-drive"></i> Connect to Google Drive
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCloudBackupModal()">Cancel</button>
+                <button class="btn" onclick="saveCloudBackupSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Import Modal -->
+    <div class="modal-overlay" id="bulkImportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Bulk Import Users</h3>
+                <button class="modal-close" onclick="closeBulkImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="bulkImportFile">Select CSV File</label>
+                    <input type="file" class="form-control" id="bulkImportFile" accept=".csv">
+                    <div class="form-text">Download the <a href="#" onclick="downloadUserTemplate()">template file</a> for correct format</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="bulkImportRole">Default Role</label>
+                    <select class="form-control" id="bulkImportRole">
+                        <option value="staff">Staff</option>
+                        <option value="manager">Manager</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Send Welcome Email</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="sendWelcomeEmail" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div class="form-text">Send welcome email with login instructions</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeBulkImportModal()">Cancel</button>
+                <button class="btn" onclick="processBulkImport()">Import Users</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="theme-manager.js"></script>
+    <script src="setting.js"></script>
+</body>
+</html>
