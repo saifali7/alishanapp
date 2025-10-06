@@ -18,7 +18,11 @@
     "YUKTA-PAD",
     "AMIRI-MOLD",
     "CIBA",
-    "MEERA-COTTON"
+    "MEERA-COTTON",
+    "SILENT-MOLD",
+    "JAIKAT-MOLD",
+    "U-SEEMLESS",
+    "KIRTI-FOAM"
   ],
   "panty": [
     "ICE-PANTY",
@@ -31,10 +35,11 @@
     "NICE-SET",
     "JACKLINE-SET",
     "EVING-SET",
-    "AROHI-SET"
-    
+    "AROHI-SET",
+    "SHINING-SET"
   ],
   "blause": [
-    "ORRY-BLAUSE"
+    "ORRY-BLAUSE",
+    "MERRYKOM-BLAUSE"
   ]
 }
