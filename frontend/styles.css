@@ -1860,13 +1860,13 @@
 
 /* ================= UNIQUE CODE STYLES ================= */
 .unique-code {
-    color: #28a745 !important;
+    color: #4361ee !important;
     font-weight: bold;
-    background-color: rgba(40, 167, 69, 0.1);
+    background-color: #e9ecef;
     padding: 3px 8px;
     border-radius: 4px;
     margin-left: 8px;
-    border: 1px solid #28a745;
+    border: 1px solid #4361ee;
 }
 
 .datetime {
@@ -1880,11 +1880,11 @@
 
 /* Modal mein code display ke liye */
 .unique-code-display {
-    background: #e8f5e9;
-    color: #2e7d32;
+    background: #e9ecef;
+    color: #4361ee;
     padding: 8px 12px;
     border-radius: 4px;
-    border-left: 4px solid #4caf50;
+    border-left: 4px solid #4361ee;
     margin-top: 10px;
     font-weight: 600;
 }
@@ -2225,5 +2225,62 @@
     background: var(--white);
     cursor: pointer;
 }
+
+
+/* Single Page Form Styles */
+.form-single-page {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.form-section-group {
+    background: rgba(67, 97, 238, 0.05);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--light-gray);
+}
+
+.form-section-group h3 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--light-gray);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.form-section-group h4 {
+    color: var(--secondary);
+    margin: 1rem 0;
+    font-size: 1.1rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+/* Responsive design for single page */
+@media (max-width: 768px) {
+    .form-single-page {
+        gap: 1.5rem;
+    }
+    
+    .form-section-group {
+        padding: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+
+
 
 
