@@ -1,13 +1,8 @@
-
-
 // ================= ENHANCED SEARCH VARIABLES =================
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
 let searchAnalytics = JSON.parse(localStorage.getItem('searchAnalytics')) || {};
 let currentSuggestions = [];
 let selectedSuggestionIndex = -1;
-
-
-
 
 // ✅ YEH CODE script2.js KE START MEIN ADD KAREN
 // ================= VALIDATION FUNCTIONS =================
@@ -19,7 +14,7 @@ function validateInventoryItem(item) {
     }
     
 
-    // Required fields check - CODE KO ADD KAREN
+    // Required fields check
     const requiredFields = ['productType', 'quality', 'code'];
     if (!requiredFields.every(field => field in item)) {
         console.error('Invalid item: missing required fields');
@@ -948,37 +943,37 @@ function updateStats() {
     const braItems = inventoryItems.filter(item => item.productType === 'BRA');
     const pantyItems = inventoryItems.filter(item => item.productType === 'PANTY');
     const setItems = inventoryItems.filter(item => item.productType === 'SET');
-    const blauseItems = inventoryItems.filter(item => item.productType === 'blause');
+    const blouseItems = inventoryItems.filter(item => item.productType === 'BLOUSE');
     
     const totalBraElement = document.getElementById('totalBraItems');
     const totalPantyElement = document.getElementById('totalPantyItems');
     const totalSetElement = document.getElementById('totalSetItems');
-    const totalBlauseElement = document.getElementById('totalBlauseItems');
+    const totalBlouseElement = document.getElementById('totalBlouseItems');
     
     
     if (totalBraElement) totalBraElement.textContent = braItems.length;
     if (totalPantyElement) totalPantyElement.textContent = pantyItems.length;
     if (totalSetElement) totalSetElement.textContent = setItems.length;
-    if (totalBlauseElement) totalBlauseElement.textContent = blauseItems.length;
+    if (totalBlouseElement) totalBlouseElement.textContent = blouseItems.length;
     
     
     // Find most added quality for each type
     const braMostAddedElement = document.getElementById('braMostAdded');
     const pantyMostAddedElement = document.getElementById('pantyMostAdded');
     const setMostAddedElement = document.getElementById('setMostAdded');
-    const blauseMostAddedElement = document.getElementById('blauseMostAdded');
+    const blouseMostAddedElement = document.getElementById('blouseMostAdded');
     
     
     if (braMostAddedElement) braMostAddedElement.textContent = findMostAddedQuality(braItems);
     if (pantyMostAddedElement) pantyMostAddedElement.textContent = findMostAddedQuality(pantyItems);
     if (setMostAddedElement) setMostAddedElement.textContent = findMostAddedQuality(setItems);
-    if (blauseMostAddedElement) blauseMostAddedElement.textContent = findMostAddedQuality(blauseItems);
+    if (blouseMostAddedElement) blouseMostAddedElement.textContent = findMostAddedQuality(blouseItems);
     
     // Update quality stats for each type
     updateQualityStats('bra', braItems);
     updateQualityStats('panty', pantyItems);
     updateQualityStats('set', setItems);
-    updateQualityStats('blause', blauseItems);
+    updateQualityStats('blouse', blouseItems);
 }
 
 // Function to update global quality stats
@@ -1907,36 +1902,6 @@ function updateTotalInventory() {
 }
 
 // ========================
-// FORM TABS FUNCTIONALITY
-// ========================
-
-// Tab functionality
-function initFormTabs() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    if (tabButtons.length === 0) return;
-    
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Remove active class from all buttons and contents
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Add active class to clicked button and corresponding content
-            button.classList.add('active');
-            const tabId = button.getAttribute('data-tab') + '-tab';
-            const tabContent = document.getElementById(tabId);
-            if (tabContent) {
-                tabContent.classList.add('active');
-            }
-        });
-    });
-}
-
-// ========================
 // NOTIFICATION SYSTEM
 // ========================
 
@@ -2052,7 +2017,7 @@ async function loadQualities() {
             "bra": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "FLORA", "EAZY", "NANCY"],
             "panty": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "ADDITION", "FLORA", "EAZY"],
             "set": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"],
-            "blause": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"]
+            "blouse": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"]
         };
         
         // Setup event listeners
@@ -2084,7 +2049,7 @@ async function initApp() {
     buildSearchIndexes();
     
     // Initialize components
-    initFormTabs();
+    // initFormTabs(); // ✅ YE LINE COMMENT OUT KAREN YA REMOVE - Single page form ke liye zaroori nahi
     initMobileMenu();
     
     // Initialize size option toggles
@@ -2697,10 +2662,6 @@ function afterDataModification() {
     updateActivityFeed();
     updateTotalInventory();
 }
-
-
-
-
 
 // ================= MOBILE PERFORMANCE OPTIMIZATION ================= 
 function optimizeForMobile() {
