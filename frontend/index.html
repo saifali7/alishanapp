@@ -6,40 +6,41 @@
     <title>ALISHAN - Inventory Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    
 </head>
 <body>
     <header>
         <div class="mobile-header">
-    <div class="logo">
-        <i class="fas fa-tshirt logo-icon"></i>
-        <h1>ALISHAN</h1>
-    </div>
-    
-    <!-- Desktop Navigation - Always visible on desktop -->
-    <nav class="desktop-nav">
-        <ul>
-            <li><a href="index.html" class="active"><i class="fas fa-home"></i> HOME</a></li>
-            <li><a href="inventory.html"><i class="fas fa-database"></i> INVENTORY</a></li>
-            <li><a href="report.html"><i class="fas fa-chart-bar"></i> REPORTS</a></li>
-            <li><a href="setting.html"><i class="fas fa-cog"></i> SETTINGS</a></li>
-        </ul>
-    </nav>
-    
-    <!-- Mobile Navigation Toggle - Only for mobile -->
-    <button class="menu-toggle" id="menuToggle">
-        <i class="fas fa-bars"></i>
-    </button>
-    
-    <!-- Mobile Navigation Menu - Hidden by default -->
-    <nav class="mobile-nav" id="mobileNav">
-        <ul>
-            <li><a href="index.html" class="active"><i class="fas fa-home"></i> HOME</a></li>
-            <li><a href="inventory.html"><i class="fas fa-database"></i> INVENTORY</a></li>
-            <li><a href="report.html"><i class="fas fa-chart-bar"></i> REPORTS</a></li>
-            <li><a href="setting.html"><i class="fas fa-cog"></i> SETTINGS</a></li>
-        </ul>
-    </nav>
-</div>
+            <div class="logo">
+                <i class="fas fa-tshirt logo-icon"></i>
+                <h1>ALISHAN</h1>
+            </div>
+            
+            <!-- Desktop Navigation - Always visible on desktop -->
+            <nav class="desktop-nav">
+                <ul>
+                    <li><a href="index.html" class="active"><i class="fas fa-home"></i> HOME</a></li>
+                    <li><a href="inventory.html"><i class="fas fa-database"></i> INVENTORY</a></li>
+                    <li><a href="report.html"><i class="fas fa-chart-bar"></i> REPORTS</a></li>
+                    <li><a href="setting.html"><i class="fas fa-cog"></i> SETTINGS</a></li>
+                </ul>
+            </nav>
+            
+            <!-- Mobile Navigation Toggle - Only for mobile -->
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Mobile Navigation Menu - Hidden by default -->
+            <nav class="mobile-nav" id="mobileNav">
+                <ul>
+                    <li><a href="index.html" class="active"><i class="fas fa-home"></i> HOME</a></li>
+                    <li><a href="inventory.html"><i class="fas fa-database"></i> INVENTORY</a></li>
+                    <li><a href="report.html"><i class="fas fa-chart-bar"></i> REPORTS</a></li>
+                    <li><a href="setting.html"><i class="fas fa-cog"></i> SETTINGS</a></li>
+                </ul>
+            </nav>
+        </div>
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -61,47 +62,42 @@
 
     <div class="main-content">
         <div class="container">
-                <!-- Search Container - ENHANCED VERSION -->
-                <div class="search-container">
-                    <div class="search-bar-wrapper">
-                        <div class="search-bar">
-                            <input type="text" id="searchInput" placeholder="Search by quality name, lot number, cup size or color...">
-                            <button id="searchBtn" onclick="performSearch()">
-                                <i class="fas fa-search"></i> Search
-                            </button>
-                        </div>
-                        <!-- Suggestions dropdown will be added here dynamically -->
+            <!-- Search Container - ENHANCED VERSION -->
+            <div class="search-container">
+                <div class="search-bar-wrapper">
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" placeholder="Search by quality name, lot number, cup size or color...">
+                        <button id="searchBtn" onclick="performSearch()">
+                            <i class="fas fa-search"></i> Search
+                        </button>
                     </div>
-                    <button class="show-all-btn" id="showAllBtn" style="display: none;">
-                        <i class="fas fa-list"></i> Show All
-                    </button>
-                    
-                    <!-- Search Analytics Button (Optional) -->
-                    <button class="analytics-btn" onclick="showSearchAnalytics()" title="View Search Analytics">
-                        <i class="fas fa-chart-bar"></i>
-                    </button>
+                    <!-- Suggestions dropdown will be added here dynamically -->
                 </div>
+                <button class="show-all-btn" id="showAllBtn" style="display: none;">
+                    <i class="fas fa-list"></i> Show All
+                </button>
                 
-                <!-- Analytics Modal -->
-                <div class="modal" id="analyticsModal" style="display: none;">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h2><i class="fas fa-chart-line"></i> Search Analytics</h2>
-                            <button class="close-btn" onclick="closeModal('analyticsModal')">&times;</button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="analytics-container" id="analyticsContainer">
-                                <!-- Analytics content will be loaded here -->
-                            </div>
+                <!-- Search Analytics Button (Optional) -->
+                <button class="analytics-btn" onclick="showSearchAnalytics()" title="View Search Analytics">
+                    <i class="fas fa-chart-bar"></i>
+                </button>
+            </div>
+            
+            <!-- Analytics Modal -->
+            <div class="modal" id="analyticsModal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2><i class="fas fa-chart-line"></i> Search Analytics</h2>
+                        <button class="close-btn" onclick="closeModal('analyticsModal')">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="analytics-container" id="analyticsContainer">
+                            <!-- Analytics content will be loaded here -->
                         </div>
                     </div>
                 </div>
-           
-           
-           
-           
-           
-           
+            </div>
+       
             <div class="main-content">
                 <div class="dashboard">
                     <div class="card">
@@ -202,6 +198,39 @@
                                             <option value="NANCY">NANCY</option>
                                         </select>
                                     </div>
+                                    
+                                    <!-- IMPROVED MANUAL DATE/TIME SECTION -->
+                                    <div class="form-group full-width">
+                                        <div class="manual-datetime-section">
+                                            <div class="manual-toggle">
+                                                <label for="useManualDateTime" class="toggle-label">
+                                                    <input type="checkbox" id="useManualDateTime" onchange="toggleManualDateTime()">
+                                                    <span class="toggle-slider"></span>
+                                                    <span class="toggle-text">Add Old Entry (Manual Date)</span>
+                                                </label>
+                                            </div>
+                                            
+                                            <div id="manualDateTimeFields" class="manual-fields" style="display: none;">
+                                                <div class="datetime-help">
+                                                    <h4><i class="fas fa-info-circle"></i> Old Entry Information</h4>
+                                                    <p>Set the original date when this item was actually created/added. The system will track both the original date and when you added it to the system.</p>
+                                                </div>
+                                                
+                                                <div class="form-grid">
+                                                    <div class="form-group">
+                                                        <label for="entryDate">Original Entry Date</label>
+                                                        <input type="date" id="entryDate" class="manual-date-input">
+                                                    </div>
+                                                    
+                                                    <div class="form-group">
+                                                        <label for="entryTime">Original Entry Time</label>
+                                                        <input type="time" id="entryTime" class="manual-time-input" value="12:00">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END IMPROVED MANUAL DATE/TIME SECTION -->
                                     
                                     <div class="form-group">
                                         <label for="material">Material (meters)</label>
@@ -486,31 +515,32 @@
     <footer>
         <p>&copy; 2023 ALISHAN Garment Inventory Management System. All rights reserved.</p>
     </footer>
-<!-- YEH CODE ADD KARNA HAI -->
-<!-- Pagination Controls -->
-<div class="pagination-controls" id="paginationControls" style="display: none;">
-    <button class="btn btn-secondary" onclick="prevPage()">
-        <i class="fas fa-chevron-left"></i> Previous
-    </button>
-    
-    <span id="pageInfo" class="page-info">Page 1 of 1</span>
-    
-    <button class="btn btn-secondary" onclick="nextPage()">
-        Next <i class="fas fa-chevron-right"></i>
-    </button>
-    
-    <select class="page-select" onchange="changeItemsPerPage(this.value)">
-        <option value="10">10 items</option>
-        <option value="20">20 items</option>
-        <option value="50" selected>50 items</option>
-        <option value="100">100 items</option>
-    </select>
-</div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination-controls" id="paginationControls" style="display: none;">
+        <button class="btn btn-secondary" onclick="prevPage()">
+            <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        
+        <span id="pageInfo" class="page-info">Page 1 of 1</span>
+        
+        <button class="btn btn-secondary" onclick="nextPage()">
+            Next <i class="fas fa-chevron-right"></i>
+        </button>
+        
+        <select class="page-select" onchange="changeItemsPerPage(this.value)">
+            <option value="10">10 items</option>
+            <option value="20">20 items</option>
+            <option value="50" selected>50 items</option>
+            <option value="100">100 items</option>
+        </select>
+    </div>
+
     <div class="notification-container" id="notificationContainer"></div>
     
 
     <script src="script2.js"></script>
     <!-- Excel Export ke liye (report.html se copy karien) -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </body>
 </html>
