@@ -4,53 +4,118 @@ let searchAnalytics = JSON.parse(localStorage.getItem('searchAnalytics')) || {};
 let currentSuggestions = [];
 let selectedSuggestionIndex = -1;
 
-// ✅ YEH CODE script2.js KE START MEIN ADD KAREN
+// ================= MANUAL DATE/TIME FUNCTIONS =================
+function toggleManualDateTime() {
+    const useManual = document.getElementById('useManualDateTime');
+    const manualFields = document.getElementById('manualDateTimeFields');
+    
+    if (useManual.checked) {
+        manualFields.style.display = 'block';
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        document.getElementById('entryDate').value = twoYearsAgo.toISOString().split('T')[0];
+    } else {
+        manualFields.style.display = 'none';
+    }
+}
+
+function getEntryDateTime() {
+    const useManual = document.getElementById('useManualDateTime');
+    
+    if (useManual && useManual.checked) {
+        const dateInput = document.getElementById('entryDate');
+        const timeInput = document.getElementById('entryTime');
+        
+        if (dateInput && dateInput.value && timeInput && timeInput.value) {
+            const dateTimeString = `${dateInput.value}T${timeInput.value}`;
+            return {
+                originalDate: new Date(dateTimeString).toISOString(),
+                addedDate: getCurrentDateTime(),
+                isManual: true
+            };
+        }
+    }
+    
+    return {
+        originalDate: getCurrentDateTime(),
+        addedDate: getCurrentDateTime(),
+        isManual: false
+    };
+}
+
+function validateManualDate() {
+    const dateInput = document.getElementById('entryDate');
+    if (!dateInput || !dateInput.value) return true;
+    
+    const selectedDate = new Date(dateInput.value);
+    const today = new Date();
+    
+    if (selectedDate > today) {
+        showNotification('Entry date cannot be in the future!', 'error');
+        dateInput.focus();
+        return false;
+    }
+    
+    return true;
+}
+
+function initManualDateTime() {
+    const manualFields = document.getElementById('manualDateTimeFields');
+    if (manualFields) {
+        manualFields.style.display = 'none';
+    }
+    
+    const useManual = document.getElementById('useManualDateTime');
+    if (useManual) {
+        useManual.checked = false;
+    }
+}
+
+function addItemInChronologicalOrder(newItem) {
+    const newItemDate = new Date(newItem.dateTime);
+    
+    let insertIndex = inventoryItems.length;
+    
+    for (let i = 0; i < inventoryItems.length; i++) {
+        const currentItemDate = new Date(inventoryItems[i].dateTime);
+        
+        if (newItemDate > currentItemDate) {
+            insertIndex = i;
+            break;
+        }
+    }
+    
+    inventoryItems.splice(insertIndex, 0, newItem);
+}
+
 // ================= VALIDATION FUNCTIONS =================
-// Data validation functions
 function validateInventoryItem(item) {
     if (!item || typeof item !== 'object') {
         console.error('Invalid item: not an object');
         return false;
     }
     
-
-    // Required fields check
     const requiredFields = ['productType', 'quality', 'code'];
     if (!requiredFields.every(field => field in item)) {
         console.error('Invalid item: missing required fields');
         return false;
     }
     
-    
-    
-    // Type validation
     if (typeof item.productType !== 'string') {
         console.error('Invalid item: productType should be string');
         return false;
     }
     
-    
-    
-    
-    // Code validation
     if (typeof item.code !== 'string' || !/^\d{6}$/.test(item.code)) {
         console.error('Invalid item: code should be 6-digit string');
         return false;
     }
-    
-    
-    
-    
-    
-    
-    
     
     if (typeof item.quality !== 'string') {
         console.error('Invalid item: quality should be string');
         return false;
     }
     
-    // Optional fields validation
     if (item.material && (typeof item.material !== 'number' || item.material < 0)) {
         console.error('Invalid item: material should be positive number');
         return false;
@@ -66,7 +131,6 @@ function validateInventoryItem(item) {
         return false;
     }
     
-    // Color validation
     if (item.colors && !Array.isArray(item.colors)) {
         console.error('Invalid item: colors should be array');
         return false;
@@ -75,7 +139,6 @@ function validateInventoryItem(item) {
     return true;
 }
 
-// Data loading with validation
 function loadInventoryData() {
     try {
         const stored = localStorage.getItem('inventoryItems');
@@ -83,12 +146,10 @@ function loadInventoryData() {
         
         const parsed = JSON.parse(stored);
         
-        // Data validation - check if array hai
         if (!Array.isArray(parsed)) {
             throw new Error('Invalid data format: expected array');
         }
         
-        // Validate each item
         const validItems = [];
         const invalidItems = [];
         
@@ -101,7 +162,6 @@ function loadInventoryData() {
             }
         });
         
-        // Backup invalid data
         if (invalidItems.length > 0) {
             backupCorruptedData(JSON.stringify(invalidItems));
         }
@@ -110,7 +170,6 @@ function loadInventoryData() {
         
     } catch (error) {
         console.error('Data loading failed:', error);
-        // Backup banayein
         backupCorruptedData(stored);
         return [];
     }
@@ -125,7 +184,6 @@ function backupCorruptedData(data) {
     }
     return false;
 }
-// ================= END VALIDATION FUNCTIONS =================
 
 // ================= UNIQUE CODE GENERATOR =================
 function generateUniqueCode() {
@@ -155,7 +213,6 @@ function generateUniqueCode() {
     return code;
 }
 
-// Purane data ko migrate karne ke liye function
 function migrateOldData() {
     try {
         const stored = localStorage.getItem('inventoryItems');
@@ -164,7 +221,6 @@ function migrateOldData() {
         const parsed = JSON.parse(stored);
         let needsMigration = false;
         
-        // Check if any item missing code
         parsed.forEach(item => {
             if (!item.code) {
                 item.code = generateUniqueCode();
@@ -173,9 +229,8 @@ function migrateOldData() {
             }
         });
         
-        // Save migrated data
         if (needsMigration) {
-            localStorage.setItem('inventoryItems', JSON.parse(JSON.stringify(parsed)));
+            localStorage.setItem('inventoryItems', JSON.stringify(parsed));
             showNotification('Old data migrated successfully with unique codes', 'success');
         }
         
@@ -183,60 +238,72 @@ function migrateOldData() {
         console.error('Data migration failed:', error);
     }
 }
-// ================= END UNIQUE CODE FUNCTIONS =================
 
-// Data storage for inventory items
+// ================= CORE APPLICATION VARIABLES =================
 let inventoryItems = [];
-
-// Pagination variables
 let currentPage = 1;
 let itemsPerPage = 50;
 let totalPages = 1;
 
-// Search indexes
 let searchIndex = {
     byQuality: {},
-    byLotNumber: {},
+    byLotNumber: {}, 
     byNotes: {},
     byProductType: {}
 };
 
-// Debounce variables
 let searchTimeout = null;
-const SEARCH_DELAY = 300; // milliseconds
+const SEARCH_DELAY = 300;
 
-// Load data from localStorage safely
-// ✅ YEH CODE ADD KAREN, EXISTING LOADING CODE KO REPLACE KARKE
-// Load data with validation
 inventoryItems = loadInventoryData();
-// Function to format current date and time
+
+// ================= UTILITY FUNCTIONS =================
 function getCurrentDateTime() {
     const now = new Date();
     return now.toISOString();
 }
 
-// Function to calculate total pieces
 function calculateTotalPieces(totalDozens) {
-    return totalDozens * 12; // 1 dozen = 12 pieces
+    return totalDozens * 12;
 }
 
-// Function to calculate total amount
 function calculateTotalAmount(totalDozens, pricePerDozen) {
     return totalDozens * (pricePerDozen || 0);
 }
 
-// ✅ ADDED COLOR VALIDATION FUNCTIONS
 function isValidColor(color) {
-    // Only letters and spaces allowed, no numbers, no special characters
     return /^[a-zA-Z\s]+$/.test(color);
 }
 
 function cleanColorName(color) {
-    // Remove numbers and special characters, keep only letters and spaces
     return color.replace(/[^a-zA-Z\s]/g, '').trim();
 }
 
-// Toggle between same sizes and different sizes options
+function getEntryAge(item) {
+    const now = new Date();
+    const entryDate = new Date(item.dateTime);
+    const timeDiff = now - entryDate;
+    
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) {
+        return `${days} days ago`;
+    } else if (hours > 0) {
+        return `${hours} hours ago`;
+    } else {
+        return `${minutes} minutes ago`;
+    }
+}
+
+function sortItemsByDate(items) {
+    return items.sort((a, b) => {
+        return new Date(b.dateTime) - new Date(a.dateTime);
+    });
+}
+
+// ================= FORM MANAGEMENT FUNCTIONS =================
 function toggleSizeOption() {
     const sameSizesOption = document.querySelector('input[name="sizeOption"][value="same"]');
     const sameSizesContainer = document.getElementById('sameSizesContainer');
@@ -253,7 +320,6 @@ function toggleSizeOption() {
     }
 }
 
-// Toggle edit size option
 function toggleEditSizeOption() {
     const sameSizesOption = document.querySelector('input[name="editSizeOption"][value="same"]');
     const sameSizesContainer = document.getElementById('editSameSizesContainer');
@@ -270,7 +336,6 @@ function toggleEditSizeOption() {
     }
 }
 
-// Add color size item for different sizes option
 function addColorSizeItem() {
     const colorSizeItems = document.getElementById('colorSizeItems');
     if (!colorSizeItems) return;
@@ -301,14 +366,12 @@ function addColorSizeItem() {
     colorSizeItems.appendChild(colorSizeItem);
 }
 
-// Remove color size item
 function removeColorSizeItem(button) {
     const colorSizeItem = button.closest('.color-size-item');
     if (!colorSizeItem) return;
     
     colorSizeItem.remove();
     
-    // Update the numbers for remaining color items
     const colorSizeItems = document.getElementById('colorSizeItems');
     if (!colorSizeItems) return;
     
@@ -322,7 +385,6 @@ function removeColorSizeItem(button) {
     }
 }
 
-// Add color size item for edit modal
 function addEditColorSizeItem() {
     const editColorSizeItems = document.getElementById('editColorSizeItems');
     if (!editColorSizeItems) return;
@@ -353,9 +415,7 @@ function addEditColorSizeItem() {
     editColorSizeItems.appendChild(colorSizeItem);
 }
 
-// Remove color size item from edit modal
 function removeEditColorSizeItem(button) {
-    // Confirm before removing
     if (!confirm('Are you sure you want to remove this color?')) {
         return;
     }
@@ -365,15 +425,12 @@ function removeEditColorSizeItem(button) {
     
     colorSizeItem.remove();
     
-    // Update the numbers for remaining color items
     const editColorSizeItems = document.getElementById('editColorSizeItems');
     if (!editColorSizeItems) return;
     
     const items = editColorSizeItems.getElementsByClassName('color-size-item');
     
-    // Check if any items left
     if (items.length === 0) {
-        // Switch back to same sizes option if no colors left
         const sameSizesOption = document.querySelector('input[name="editSizeOption"][value="same"]');
         if (sameSizesOption) {
             sameSizesOption.checked = true;
@@ -382,7 +439,6 @@ function removeEditColorSizeItem(button) {
         return;
     }
     
-    // Update numbering for remaining items
     for (let i = 0; i < items.length; i++) {
         const header = items[i].querySelector('h4');
         if (header) {
@@ -390,15 +446,16 @@ function removeEditColorSizeItem(button) {
         }
     }
     
-    // Show notification
     showNotification('Color removed successfully', 'success');
 }
 
-// Function to add new inventory item
+// ================= INVENTORY MANAGEMENT FUNCTIONS =================
 function addInventoryItem(e) {
     e.preventDefault();
     
-    // Get form values
+    if (!validateManualDate()) {
+        return;
+    }
     
     const productType = document.getElementById('productType').value;
     const cupSize = document.getElementById('cupSize').value;
@@ -409,7 +466,6 @@ function addInventoryItem(e) {
     const price = parseFloat(document.getElementById('price').value) || 0;
     const notes = document.getElementById('notes').value;
     
-    // Validate required fields
     if (!productType) {
         showNotification('Product Type is required', 'error');
         return;
@@ -420,7 +476,6 @@ function addInventoryItem(e) {
         return;
     }
     
-    // Get size option
     const sizeOption = document.querySelector('input[name="sizeOption"]:checked');
     if (!sizeOption) {
         showNotification('Please select a size option', 'error');
@@ -432,16 +487,14 @@ function addInventoryItem(e) {
     let totalDozens = 0;
     
     if (sizeOption.value === 'same') {
-        // Same sizes for all colors
         const colorsInput = document.getElementById('colors');
         if (!colorsInput) {
             showNotification('Colors input not found', 'error');
             return;
         }
         
-        // ✅ UPDATED WITH AUTO-CLEAN VALIDATION
         colors = colorsInput.value.split(' ')
-            .map(color => cleanColorName(color)) // Auto-clean first
+            .map(color => cleanColorName(color))
             .filter(color => color !== '')
             .filter(color => {
                 if (!isValidColor(color)) {
@@ -451,7 +504,6 @@ function addInventoryItem(e) {
                 return true;
             });
         
-        // Get size values
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         
         sizes.forEach(size => {
@@ -462,7 +514,6 @@ function addInventoryItem(e) {
             }
         });
     } else {
-        // Different sizes for each color
         const colorSizeItems = document.getElementById('colorSizeItems');
         if (!colorSizeItems) {
             showNotification('Color size items container not found', 'error');
@@ -471,25 +522,22 @@ function addInventoryItem(e) {
         
         const colorObjects = [];
         
-        // Process each color size item
         for (let i = 0; i < colorSizeItems.children.length; i++) {
             const item = colorSizeItems.children[i];
             const colorNameInput = item.querySelector('.color-name');
             if (!colorNameInput) continue;
             
-            const colorName = cleanColorName(colorNameInput.value.trim()); // ✅ AUTO-CLEAN
+            const colorName = cleanColorName(colorNameInput.value.trim());
             
-            // ✅ ADDED VALIDATION
             if (colorName) {
                 if (!isValidColor(colorName)) {
                     showNotification(`Invalid color: "${colorName}". Only letters allowed.`, 'error');
-                    continue; // Skip invalid color
+                    continue;
                 }
                 
                 const colorSizes = {};
                 let colorTotal = 0;
                 
-                // Get sizes for this color
                 [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
                     const sizeInput = item.querySelector(`.color-size-${size}`);
                     if (sizeInput) {
@@ -511,18 +559,18 @@ function addInventoryItem(e) {
         colors = colorObjects;
     }
     
-    // Calculate totals
     const totalPieces = calculateTotalPieces(totalDozens);
     const totalAmount = calculateTotalAmount(totalDozens, price);
-    const dateTime = getCurrentDateTime();
     
-    // Create new inventory item
+    const dateInfo = getEntryDateTime();
+    
     const newItem = {
         id: Date.now(),
-        code: generateUniqueCode(), // YEH LINE ADD KAREN
-        dateTime,
+        code: generateUniqueCode(),
+        dateTime: dateInfo.originalDate,
+        addedDateTime: dateInfo.addedDate,
         productType: productType.toUpperCase(),
-        cupSize: cupSize || 'N/A', // Add cup size
+        cupSize: cupSize || 'N/A',
         lotNumber: lotNumber,
         quality: quality.toUpperCase(),
         material,
@@ -534,56 +582,49 @@ function addInventoryItem(e) {
         totalPieces,
         totalAmount,
         inStock: true,
-        sizeOption: sizeOption.value
+        sizeOption: sizeOption.value,
+        isManualEntry: dateInfo.isManual
     };
     
-    // Add size data for simple format
     if (sizeOption.value === 'same') {
         Object.assign(newItem, sizeData);
     }
     
-    // ✅ YEH VALIDATION CODE ADD KAREN
-// Validate before saving
-if (!validateInventoryItem(newItem)) {
-    showNotification('Invalid item data. Please check all fields.', 'error');
-    return;
-}
+    if (!validateInventoryItem(newItem)) {
+        showNotification('Invalid item data. Please check all fields.', 'error');
+        return;
+    }
     
-    // Add to inventory (at the beginning of the array to show newest first)
-    inventoryItems.unshift(newItem);
+    addItemInChronologicalOrder(newItem);
     
-    afterDataModification(); // Use centralized update function
+    afterDataModification();
     
-    // Reset form
     document.getElementById('productForm').reset();
     
-    // Reset size mode to "Same sizes for all colors"
     const sameSizesOption = document.querySelector('input[name="sizeOption"][value="same"]');
     if (sameSizesOption) {
         sameSizesOption.checked = true;
-        toggleSizeOption();
     }
+    toggleSizeOption();
+    initManualDateTime();
     
-    // Clear color size items if any
     const colorSizeItems = document.getElementById('colorSizeItems');
     if (colorSizeItems) {
         colorSizeItems.innerHTML = '';
     }
     
-    // Show success message
-    showNotification('Product entry added successfully!', 'success');
+    const entryType = newItem.isManualEntry ? 'Old entry' : 'New entry';
+    showNotification(`${entryType} added successfully with date: ${new Date(dateInfo.originalDate).toLocaleDateString()}!`, 'success');
 }
 
-// Function to update inventory display
 function updateInventoryDisplay() {
-    displayPaginatedItems(); // Use pagination instead of direct render
+    displayPaginatedItems();
 }
 
 function renderItems(items) {
     const inventoryCards = document.getElementById('inventoryCards');
     if (!inventoryCards) return;
     
-    // Use DocumentFragment for better performance
     const fragment = document.createDocumentFragment();
     
     if (items.length === 0) {
@@ -605,51 +646,69 @@ function renderItems(items) {
         fragment.appendChild(card);
     });
     
-    // Clear and append in one operation
     inventoryCards.innerHTML = '';
     inventoryCards.appendChild(fragment);
 }
 
-// Function to create inventory card
+
+
+
 function createInventoryCard(item, index) {
     const card = document.createElement('div');
     card.className = 'inventory-card';
     
+    // ✅ Card header ke liye ORIGINAL date (manual ya current)
+    const originalDate = new Date(item.dateTime);
     
+    // ✅ Additional info ke liye CURRENT date (jab add kiya)
+    const currentDate = item.addedDateTime ? new Date(item.addedDateTime) : new Date();
     
-    
-    // ✅ YE CODE ADD KARNA HAI (Date formatting)
-const date = new Date(item.dateTime);
-const formattedDate = date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-});
-const formattedTime = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit'
-});
-
-
-
-
-
-
-// ✅ Format last modified date (if available)
-let modifiedHtml = '';
-if (item.lastModified) {
-    const modifiedDate = new Date(item.lastModified);
-    const formattedModifiedDate = modifiedDate.toLocaleDateString('en-US', {
+    const formattedOriginalDate = originalDate.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
     });
-    const formattedModifiedTime = modifiedDate.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
     
-    modifiedHtml = `
+    const formattedCurrentDate = currentDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+
+    const now = new Date();
+    const entryDate = new Date(item.dateTime);
+    const timeDiff = now - entryDate;
+    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    
+    let entryTypeBadge = '';
+    if (item.isManualEntry) {
+        entryTypeBadge = '<span class="card-badge badge-manual" title="Manually dated entry">OLD ENTRY</span>';
+    } else {
+        if (daysDiff > 30) {
+            entryTypeBadge = '<span class="card-badge badge-old" title="Old Entry - ' + daysDiff + ' days ago">OLD</span>';
+        } else if (daysDiff > 7) {
+            entryTypeBadge = '<span class="card-badge badge-recent" title="Recent Entry - ' + daysDiff + ' days ago">RECENT</span>';
+        } else {
+            entryTypeBadge = '<span class="card-badge badge-new" title="New Entry - ' + daysDiff + ' days ago">NEW</span>';
+        }
+    }
+
+    let modifiedHtml = '';
+    if (item.lastModified) {
+        const modifiedDate = new Date(item.lastModified);
+        const formattedModifiedDate = modifiedDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        const formattedModifiedTime = modifiedDate.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+        
+        modifiedHtml = `
             <div class="detail-item">
                 <span class="detail-label">LAST UPDATED:</span>
                 <span class="detail-value">
@@ -658,28 +717,20 @@ if (item.lastModified) {
                 </span>
             </div>
         `;
-}
+    }
     
-    
-    
-    
-    
-    // Safe check for colors
     const hasColors = Array.isArray(item.colors) && item.colors.length > 0;
     const isSimpleColorFormat = hasColors && typeof item.colors[0] === 'string';
     
-    // Calculate totals
     const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
     let totalDozensAllColors = 0;
     
     if (isSimpleColorFormat) {
-        // For simple format (colors as strings)
         sizes.forEach(size => {
             totalDozensAllColors += item[`size${size}`] || 0;
         });
         totalDozensAllColors = totalDozensAllColors * item.colors.length;
     } else if (hasColors) {
-        // For complex format (colors as objects with sizes)
         item.colors.forEach(color => {
             let colorTotal = 0;
             sizes.forEach(size => {
@@ -689,10 +740,8 @@ if (item.lastModified) {
         });
     }
     
-    // Calculate total amount
     const totalAmount = totalDozensAllColors * item.price;
     
-    // Create color tags
     let colorTags = '';
     if (hasColors) {
         if (isSimpleColorFormat) {
@@ -708,11 +757,9 @@ if (item.lastModified) {
         }
     }
     
-    // Create card content based on format type
     let cardContent = '';
     
     if (isSimpleColorFormat) {
-        // Simple format layout
         cardContent = `
             <div class="calculation-flow">
                 <div class="flow-box">
@@ -770,8 +817,6 @@ if (item.lastModified) {
             </div>
         `;
     } else if (hasColors) {
-        // Complex format layout
-        // Create color size tables
         const colorSizeTables = item.colors.map(color => {
             let colorTotal = 0;
             const sizeItems = sizes.map(size => {
@@ -841,7 +886,6 @@ if (item.lastModified) {
             </div>
         `;
     } else {
-        // No colors specified
         cardContent = `
             <div class="calculation-flow">
                 <div class="flow-box">
@@ -852,94 +896,106 @@ if (item.lastModified) {
         `;
     }
     
-card.innerHTML = `
+    card.innerHTML = `
     <div class="card-header">
-        
         <div>
-                <!-- Line 1: Quality and Lot Number -->
-                <h3>${item.quality}   (Lot: ${item.lotNumber || 'N/A'})</h3>
-                
-                <!-- Line 2: Date and Unique Code -->
-                <div class="datetime">
-                    ${formattedDate}, ${formattedTime}   
-                    <span class="unique-code">(Unique Code: ${item.code})</span>
-                </div>
+            <!-- QUALITY NAME aur LOT NUMBER EK SAATH -->
+            <h3>${item.quality} (Lot: ${item.lotNumber || 'N/A'})</h3>
+            
+            <!-- DATE aur UNIQUE CODE EK SAATH - ORIGINAL DATE -->
+            <div class="datetime">
+                <strong>${formattedOriginalDate}</strong>
+                <span class="unique-code">Code: ${item.code}</span>
             </div>
+        </div>
         
         <div>
             <span class="card-badge badge-primary">${item.productType}</span>
             <span class="card-badge badge-secondary">${isSimpleColorFormat ? 'SIMPLE' : 'DETAILED'}</span>
             ${item.cupSize && item.cupSize !== 'N/A' ? `<span class="card-badge" style="background-color: #4cc9f0; color: white;">${item.cupSize} CUP</span>` : ''}
+            
+            <!-- ENTRY TYPE BADGES -->
+            ${entryTypeBadge}
         </div>
     </div>
         
-        <div class="card-content">
-            ${cardContent}
-            
-            <div class="details-container">
-                <div class="detail-box">
-                    <h4><i class="fas fa-info-circle"></i> PRODUCT DETAILS</h4>
-                    <div class="detail-item">
-                        <span class="detail-label">MATERIAL:</span>
-                        <span class="detail-value">${item.material} M</span>
-                    </div>
+    <div class="card-content">
+        ${cardContent}
+        
+        <div class="details-container">
+            <div class="detail-box">
+                <h4><i class="fas fa-info-circle"></i> PRODUCT DETAILS</h4>
+                <div class="detail-item">
+                    <span class="detail-label">MATERIAL:</span>
+                    <span class="detail-value">${item.material} M</span>
+                </div>
                 <div class="detail-item">
                     <span class="detail-label">CUP SIZE:</span>
                     <span class="detail-value">${item.cupSize || 'N/A'}</span>
                 </div>
-                    <div class="detail-item">
-                        <span class="detail-label">WEIGHT:</span>
-                        <span class="detail-value">${item.weight} KG</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">STATUS:</span>
-                        <span class="detail-value">${item.inStock ? 'IN STOCK' : 'OUT OF STOCK'}</span>
-                    </div>
+                <div class="detail-item">
+                    <span class="detail-label">WEIGHT:</span>
+                    <span class="detail-value">${item.weight} KG</span>
                 </div>
-                
-                <div class="detail-box">
-                    <h4><i class="fas fa-sticky-note"></i> ADDITIONAL INFO</h4>
-                    <div class="detail-item">
-                        <span class="detail-label">LOT NUMBER:</span>
-                        <span class="detail-value">${item.lotNumber || 'N/A'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">NOTES:</span>
-                        <span class="detail-value">${item.notes || 'N/A'}</span>
-                    </div>
-                    
-                        ${modifiedHtml} <!-- ✅ YAHAN ADD HOGAA -->
-                    
+                <div class="detail-item">
+                    <span class="detail-label">STATUS:</span>
+                    <span class="detail-value">${item.inStock ? 'IN STOCK' : 'OUT OF STOCK'}</span>
                 </div>
-            </div>
-        </div>
-        
-        <div class="card-footer">
-            <div class="card-actions">
-                <button class="action-btn btn-edit" onclick="openEditModal(${index})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="action-btn btn-delete" onclick="deleteItem(${index})">
-                    <i class="fas fa-trash"></i>
-                </button>
-                <button class="action-btn btn-stock ${!item.inStock ? 'stock-out' : ''}" onclick="toggleStock(${index})">
-                    <i class="fas ${item.inStock ? 'fa-check' : 'fa-times'}"></i>
-                </button>
             </div>
             
-            <div class="total-price">
-                <span class="total-label">TOTAL AMOUNT</span>
-                <span class="total-amount">₹${totalAmount.toLocaleString()}</span>
+            <div class="detail-box">
+                <h4><i class="fas fa-sticky-note"></i> ADDITIONAL INFO</h4>
+                <div class="detail-item">
+                    <span class="detail-label">LOT NUMBER:</span>
+                    <span class="detail-value">${item.lotNumber || 'N/A'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">ENTRY DATE:</span>
+                    <span class="detail-value">
+                        <i class="fas fa-calendar"></i> ${formattedCurrentDate} <!-- ✅ CURRENT DATE -->
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">NOTES:</span>
+                    <span class="detail-value">${item.notes || 'N/A'}</span>
+                </div>
+                
+                ${modifiedHtml}
             </div>
         </div>
+    </div>
+    
+    <div class="card-footer">
+        <div class="card-actions">
+            <button class="action-btn btn-edit" onclick="openEditModal(${index})">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn btn-delete" onclick="deleteItem(${index})">
+                <i class="fas fa-trash"></i>
+            </button>
+            <button class="action-btn btn-stock ${!item.inStock ? 'stock-out' : ''}" onclick="toggleStock(${index})">
+                <i class="fas ${item.inStock ? 'fa-check' : 'fa-times'}"></i>
+            </button>
+        </div>
+        
+        <div class="total-price">
+            <span class="total-label">TOTAL AMOUNT</span>
+            <span class="total-amount">₹${totalAmount.toLocaleString()}</span>
+        </div>
+    </div>
     `;
     
     return card;
 }
 
-// Function to update stats
+
+
+
+
+ 
+
+// ================= STATISTICS FUNCTIONS =================
 function updateStats() {
-    // Count items by type
     const braItems = inventoryItems.filter(item => item.productType === 'BRA');
     const pantyItems = inventoryItems.filter(item => item.productType === 'PANTY');
     const setItems = inventoryItems.filter(item => item.productType === 'SET');
@@ -950,33 +1006,27 @@ function updateStats() {
     const totalSetElement = document.getElementById('totalSetItems');
     const totalBlouseElement = document.getElementById('totalBlouseItems');
     
-    
     if (totalBraElement) totalBraElement.textContent = braItems.length;
     if (totalPantyElement) totalPantyElement.textContent = pantyItems.length;
     if (totalSetElement) totalSetElement.textContent = setItems.length;
     if (totalBlouseElement) totalBlouseElement.textContent = blouseItems.length;
     
-    
-    // Find most added quality for each type
     const braMostAddedElement = document.getElementById('braMostAdded');
     const pantyMostAddedElement = document.getElementById('pantyMostAdded');
     const setMostAddedElement = document.getElementById('setMostAdded');
     const blouseMostAddedElement = document.getElementById('blouseMostAdded');
-    
     
     if (braMostAddedElement) braMostAddedElement.textContent = findMostAddedQuality(braItems);
     if (pantyMostAddedElement) pantyMostAddedElement.textContent = findMostAddedQuality(pantyItems);
     if (setMostAddedElement) setMostAddedElement.textContent = findMostAddedQuality(setItems);
     if (blouseMostAddedElement) blouseMostAddedElement.textContent = findMostAddedQuality(blouseItems);
     
-    // Update quality stats for each type
     updateQualityStats('bra', braItems);
     updateQualityStats('panty', pantyItems);
     updateQualityStats('set', setItems);
     updateQualityStats('blouse', blouseItems);
 }
 
-// Function to update global quality stats
 function updateGlobalQualityStats() {
     const container = document.getElementById('globalQualityStats');
     if (!container) return;
@@ -988,17 +1038,14 @@ function updateGlobalQualityStats() {
         return;
     }
     
-    // Count items by quality across all product types
     const qualityCount = {};
     inventoryItems.forEach(item => {
         qualityCount[item.quality] = (qualityCount[item.quality] || 0) + 1;
     });
     
-    // Sort qualities by count (descending)
     const sortedQualities = Object.entries(qualityCount)
         .sort((a, b) => b[1] - a[1]);
     
-    // Display top 3 qualities
     sortedQualities.slice(0, 3).forEach(([quality, count]) => {
         const qualityItem = document.createElement('div');
         qualityItem.className = 'quality-item';
@@ -1010,7 +1057,6 @@ function updateGlobalQualityStats() {
     });
 }
 
-// Function to find most added quality
 function findMostAddedQuality(items) {
     if (items.length === 0) return '-';
     
@@ -1032,7 +1078,6 @@ function findMostAddedQuality(items) {
     return mostAdded;
 }
 
-// Function to update quality stats
 function updateQualityStats(type, items) {
     const container = document.getElementById(`${type}QualityStats`);
     if (!container) return;
@@ -1044,17 +1089,14 @@ function updateQualityStats(type, items) {
         return;
     }
     
-    // Count items by quality
     const qualityCount = {};
     items.forEach(item => {
         qualityCount[item.quality] = (qualityCount[item.quality] || 0) + 1;
     });
     
-    // Sort qualities by count (descending)
     const sortedQualities = Object.entries(qualityCount)
         .sort((a, b) => b[1] - a[1]);
     
-    // Display top 3 qualities
     sortedQualities.slice(0, 3).forEach(([quality, count]) => {
         const qualityItem = document.createElement('div');
         qualityItem.className = 'quality-item';
@@ -1066,43 +1108,38 @@ function updateQualityStats(type, items) {
     });
 }
 
-// Function to toggle stock status
+// ================= ITEM MANAGEMENT FUNCTIONS =================
 function toggleStock(index) {
     inventoryItems[index].inStock = !inventoryItems[index].inStock;
-    afterDataModification(); // Use centralized update function
+    afterDataModification();
     showNotification(`Item marked as ${inventoryItems[index].inStock ? 'In Stock' : 'Out of Stock'}`, 'success');
 }
 
-// Function to open edit modal - FIXED VERSION
 function openEditModal(index) {
     const item = inventoryItems[index];
     const editModal = document.getElementById('editModal');
     
     if (!editModal) return;
     
-    // Unique code display update karen
     const codeDisplay = document.getElementById('uniqueCodeDisplay');
     if (codeDisplay && item.code) {
         codeDisplay.textContent = `Unique Code: ${item.code} (Cannot be changed)`;
         codeDisplay.style.display = 'block';
     }
     
-    // Remove any existing event listeners first
     const editSizeOptionRadios = document.querySelectorAll('input[name="editSizeOption"]');
     editSizeOptionRadios.forEach(radio => {
         radio.replaceWith(radio.cloneNode(true));
     });
     
-    // ✅ NAYA CODE: Product type set karne ke baad quality options update karein
     document.getElementById('editProductType').value = item.productType.toLowerCase();
     updateEditQualityOptions(item.productType.toLowerCase());
     
-    // ✅ NAYA CODE: Quality value set karein
     document.getElementById('editQuality').value = item.quality;
-    // Populate form with item data
+    
     document.getElementById('editIndex').value = index;
     document.getElementById('editProductType').value = item.productType.toLowerCase();
-    // Cup size ko set karein edit modal mein
+    
     document.getElementById('editCupSize').value = item.cupSize || '';
     document.getElementById('editLotNumber').value = item.lotNumber;
     document.getElementById('editQuality').value = item.quality;
@@ -1111,19 +1148,16 @@ function openEditModal(index) {
     document.getElementById('editPrice').value = item.price;
     document.getElementById('editNotes').value = item.notes || '';
     
-    // Size option based on item type
     if (item.sizeOption === 'same') {
         const sameSizesOption = document.querySelector('input[name="editSizeOption"][value="same"]');
         if (sameSizesOption) {
             sameSizesOption.checked = true;
         }
         
-        // Set colors (for simple format)
         if (Array.isArray(item.colors) && item.colors.length > 0 && typeof item.colors[0] === 'string') {
             document.getElementById('editColors').value = item.colors.join(' ');
         }
         
-        // Set size values
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         sizes.forEach(size => {
             const element = document.getElementById(`editSize${size}`);
@@ -1132,7 +1166,6 @@ function openEditModal(index) {
             }
         });
         
-        // Show same sizes container, hide different
         document.getElementById('editSameSizesContainer').style.display = 'block';
         document.getElementById('editDifferentSizesContainer').style.display = 'none';
         
@@ -1142,12 +1175,10 @@ function openEditModal(index) {
             differentSizesOption.checked = true;
         }
         
-        // Set colors input
         if (Array.isArray(item.colors) && item.colors.length > 0 && typeof item.colors[0] === 'object') {
             document.getElementById('editColors').value = item.colors.map(c => c.name).join(' ');
         }
         
-        // Populate color-size items
         const editColorSizeItems = document.getElementById('editColorSizeItems');
         if (editColorSizeItems) {
             editColorSizeItems.innerHTML = '';
@@ -1179,31 +1210,25 @@ function openEditModal(index) {
             }
         }
         
-        // Show different sizes container, hide same
         document.getElementById('editSameSizesContainer').style.display = 'none';
         document.getElementById('editDifferentSizesContainer').style.display = 'block';
     }
     
-    // Add event listener for size option change
     const newEditSizeOptionRadios = document.querySelectorAll('input[name="editSizeOption"]');
     newEditSizeOptionRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             if (this.value === 'different' && item.sizeOption === 'same') {
-                // Convert from same to different sizes
                 convertSameToDifferentSizes(item);
             }
             toggleEditSizeOption();
         });
     });
     
-    // Initialize the modal state
     toggleEditSizeOption();
     
-    // Show modal
     editModal.style.display = 'flex';
 }
 
-// NEW FUNCTION: Convert same sizes format to different sizes format
 function convertSameToDifferentSizes(item) {
     const editColorSizeItems = document.getElementById('editColorSizeItems');
     if (!editColorSizeItems) return;
@@ -1215,7 +1240,6 @@ function convertSameToDifferentSizes(item) {
             const colorSizeItem = document.createElement('div');
             colorSizeItem.className = 'color-size-item';
             
-            // Create size inputs with values from the same sizes format
             let sizeInputsHTML = '';
             const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
             
@@ -1247,12 +1271,10 @@ function convertSameToDifferentSizes(item) {
         });
     }
     
-    // Show different sizes container, hide same
     document.getElementById('editSameSizesContainer').style.display = 'none';
     document.getElementById('editDifferentSizesContainer').style.display = 'block';
 }
 
-// Function to close edit modal
 function closeEditModal() {
     const editModal = document.getElementById('editModal');
     if (editModal) {
@@ -1260,20 +1282,16 @@ function closeEditModal() {
     }
 }
 
-// Function to update item
 function updateItem(e) {
     e.preventDefault();
     
     const index = document.getElementById('editIndex').value;
     const item = inventoryItems[index];
     
-    
-    
-    // ✅ ORIGINAL DATE/TIME PRESERVE KAREN
     const originalDateTime = item.dateTime;
+    const originalAddedDateTime = item.addedDateTime;
+    const originalIsManual = item.isManualEntry;
     
-    
-    // Get form values
     const productType = document.getElementById('editProductType').value;
     const cupSize = document.getElementById('editCupSize').value;
     const lotNumber = document.getElementById('editLotNumber').value;
@@ -1283,7 +1301,6 @@ function updateItem(e) {
     const price = parseFloat(document.getElementById('editPrice').value) || 0;
     const notes = document.getElementById('editNotes').value;
     
-    // Validate required fields
     if (!productType) {
         showNotification('Product Type is required', 'error');
         return;
@@ -1294,7 +1311,6 @@ function updateItem(e) {
         return;
     }
     
-    // Get size option
     const sizeOption = document.querySelector('input[name="editSizeOption"]:checked');
     if (!sizeOption) {
         showNotification('Please select a size option', 'error');
@@ -1306,16 +1322,14 @@ function updateItem(e) {
     let totalDozens = 0;
     
     if (sizeOption.value === 'same') {
-        // Same sizes for all colors - EDIT MODAL
         const colorsInput = document.getElementById('editColors');
         if (!colorsInput) {
             showNotification('Colors input not found', 'error');
             return;
         }
         
-        // ✅ UPDATED WITH AUTO-CLEAN VALIDATION - EDIT MODAL
         colors = colorsInput.value.split(' ')
-            .map(color => cleanColorName(color)) // Auto-clean first
+            .map(color => cleanColorName(color))
             .filter(color => color !== '')
             .filter(color => {
                 if (!isValidColor(color)) {
@@ -1325,7 +1339,6 @@ function updateItem(e) {
                 return true;
             });
         
-        // Get size values
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         
         sizes.forEach(size => {
@@ -1336,7 +1349,6 @@ function updateItem(e) {
             }
         });
     } else {
-        // Different sizes for each color - EDIT MODAL
         const editColorSizeItems = document.getElementById('editColorSizeItems');
         if (!editColorSizeItems) {
             showNotification('Color size items container not found', 'error');
@@ -1345,25 +1357,22 @@ function updateItem(e) {
         
         const colorObjects = [];
         
-        // Process each color size item - EDIT MODAL
         for (let i = 0; i < editColorSizeItems.children.length; i++) {
             const colorItem = editColorSizeItems.children[i];
             const colorNameInput = colorItem.querySelector('.edit-color-name');
             if (!colorNameInput) continue;
             
-            const colorName = cleanColorName(colorNameInput.value.trim()); // ✅ AUTO-CLEAN
+            const colorName = cleanColorName(colorNameInput.value.trim());
             
-            // ✅ ADDED VALIDATION - EDIT MODAL
             if (colorName) {
                 if (!isValidColor(colorName)) {
                     showNotification(`Invalid color: "${colorName}". Only letters allowed.`, 'error');
-                    continue; // Skip invalid color
+                    continue;
                 }
                 
                 const colorSizes = {};
                 let colorTotal = 0;
                 
-                // Get sizes for this color - EDIT MODAL
                 [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
                     const sizeInput = colorItem.querySelector(`.edit-color-size-${size}`);
                     if (sizeInput) {
@@ -1385,13 +1394,11 @@ function updateItem(e) {
         colors = colorObjects;
     }
     
-    // Calculate totals
     const totalPieces = calculateTotalPieces(totalDozens);
     const totalAmount = calculateTotalAmount(totalDozens, price);
     
-    // Update item properties
     item.productType = productType.toUpperCase();
-item.cupSize = cupSize;
+    item.cupSize = cupSize;
     item.lotNumber = lotNumber;
     item.quality = quality.toUpperCase();
     item.material = material;
@@ -1404,76 +1411,61 @@ item.cupSize = cupSize;
     item.totalAmount = totalAmount;
     item.sizeOption = sizeOption.value;
     
-    // Add size data for simple format
     if (sizeOption.value === 'same') {
         Object.assign(item, sizeData);
     } else {
-        // Remove size data if switching from same to different
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         sizes.forEach(size => {
             delete item[`size${size}`];
         });
     }
     
-    // ✅ YEH VALIDATION CODE ADD KAREN
-// Validate before saving
-if (!validateInventoryItem(item)) {
-    showNotification('Invalid item data. Please check all fields.', 'error');
-    return;
-}
+    if (!validateInventoryItem(item)) {
+        showNotification('Invalid item data. Please check all fields.', 'error');
+        return;
+    }
     
-    // Update date/time
-  //  item.dateTime = getCurrentDateTime();
-  
-  
-  // ✅ DONO DATES SET KAREN
-item.dateTime = originalDateTime; // Creation date change nahi hoga
-item.lastModified = getCurrentDateTime(); // Modification date update hoga
+    item.dateTime = originalDateTime;
+    item.addedDateTime = originalAddedDateTime;
+    item.isManualEntry = originalIsManual;
+    item.lastModified = getCurrentDateTime();
     
-    afterDataModification(); // Use centralized update function
+    afterDataModification();
     
-    // Close modal
     closeEditModal();
     
-    // Show success message
     showNotification('Product entry updated successfully!', 'success');
 }
 
-// Function to delete item
 function deleteItem(index) {
     if (confirm('Are you sure you want to delete this item?')) {
         inventoryItems.splice(index, 1);
-        afterDataModification(); // Use centralized update function
+        afterDataModification();
         showNotification('Item deleted successfully', 'success');
     }
 }
 
-// Replace existing searchItems function with this:
+// ================= SEARCH AND FILTER FUNCTIONS =================
 function searchItems() {
     const searchInput = document.getElementById('searchInput');
     if (!searchInput) return;
     
     const searchTerm = searchInput.value.trim();
     
-    // Clear previous timeout
     if (searchTimeout) {
         clearTimeout(searchTimeout);
     }
     
-    // Show loading indicator
     const searchBtn = document.getElementById('searchBtn');
     const originalHtml = searchBtn.innerHTML;
     searchBtn.innerHTML = '<div class="loading-spinner"></div>';
     
-    // Set new timeout with debounce
     searchTimeout = setTimeout(() => {
         let filteredItems;
         
-        // Use indexes for faster search if term is long enough
         if (searchTerm.length >= 2) {
             filteredItems = searchWithIndexes(searchTerm);
         } else {
-            // Fallback to regular filter for short terms
             filteredItems = inventoryItems.filter(item => 
                 (item.quality && item.quality.toLowerCase().includes(searchTerm)) || 
                 (item.lotNumber && item.lotNumber.toLowerCase().includes(searchTerm)) ||
@@ -1482,35 +1474,26 @@ function searchItems() {
             );
         }
         
-        // Display results
         renderItems(filteredItems);
         
-        // Show result count
         showNotification(`Found ${filteredItems.length} items matching "${searchTerm}"`, 'info');
         
-        // Restore search button
         searchBtn.innerHTML = originalHtml;
         
     }, SEARCH_DELAY);
 }
 
-// Update handleSearch function
 function handleSearch(event) {
     if (event.key === 'Enter') {
-        // Immediate search on Enter
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         performSearch();
     } else {
-        // Debounced search on typing
         searchItems();
     }
 }
 
-
-
-// ✅ YE NAYA performSearch FUNCTION ADD KAREN
 function performSearch() {
     const searchInput = document.getElementById('searchInput');
     if (!searchInput) return;
@@ -1518,24 +1501,20 @@ function performSearch() {
     const searchTerm = searchInput.value.trim();
     let filteredItems = [];
     
-    // Show loading spinner temporarily
     const searchBtn = document.getElementById('searchBtn');
     if (searchBtn) {
         const originalHtml = searchBtn.innerHTML;
         searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
         
-        // Reset after delay
         setTimeout(() => {
             searchBtn.innerHTML = originalHtml;
         }, 1000);
     }
     
     if (!searchTerm) {
-        // Show all items if search is empty
         filteredItems = [...inventoryItems];
         showNotification('Showing all inventory items', 'info');
     } else {
-        // Perform simple search without indexes
         filteredItems = inventoryItems.filter(item => {
             const searchTermLower = searchTerm.toLowerCase();
             return (
@@ -1544,7 +1523,6 @@ function performSearch() {
                 (item.notes && item.notes.toLowerCase().includes(searchTermLower)) ||
                 (item.cupSize && item.cupSize.toLowerCase().includes(searchTermLower)) ||
                 (item.code && item.code.includes(searchTerm)) ||
-                // Colors search
                 (item.colors && Array.isArray(item.colors) &&
                     item.colors.some(color =>
                         typeof color === 'string' ?
@@ -1557,32 +1535,24 @@ function performSearch() {
         showNotification(`Found ${filteredItems.length} items matching "${searchTerm}"`, 'info');
     }
     
-    // Display results based on which page we're on
     if (typeof renderInventoryCards === 'function') {
         renderInventoryCards(filteredItems);
     } else if (typeof renderItems === 'function') {
         renderItems(filteredItems);
     }
     
-    // Update pagination if available
     if (typeof updatePaginationControls === 'function') {
         updatePaginationControls();
     }
     
-    // Hide suggestions
     const suggestionsList = document.getElementById('suggestionsList');
     if (suggestionsList) {
         suggestionsList.style.display = 'none';
     }
     
-    return false; // Prevent form submission
+    return false;
 }
 
-
-
-
-
-// Function to show all items
 function showAllItems() {
     const searchInput = document.getElementById('searchInput');
     const showAllBtn = document.getElementById('showAllBtn');
@@ -1631,17 +1601,25 @@ function changeItemsPerPage(value) {
 }
 
 function displayPaginatedItems() {
+    const sortedItems = sortItemsByDate([...inventoryItems]);
+    
     const start = (currentPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    const pageItems = inventoryItems.slice(start, end);
+    const pageItems = sortedItems.slice(start, end);
     
     renderItems(pageItems);
     updatePaginationControls();
+    
+    if (sortedItems.length > 0) {
+        const oldest = new Date(sortedItems[sortedItems.length - 1].dateTime);
+        const newest = new Date(sortedItems[0].dateTime);
+        
+        console.log(`Displaying items from ${oldest.toLocaleDateString()} to ${newest.toLocaleDateString()}`);
+    }
 }
 
 // ================= SEARCH INDEX FUNCTIONS =================
 function buildSearchIndexes() {
-    // Reset indexes
     searchIndex = {
         byQuality: {},
         byLotNumber: {}, 
@@ -1649,15 +1627,12 @@ function buildSearchIndexes() {
         byProductType: {}
     };
     
-    // Build indexes
     inventoryItems.forEach((item, index) => {
-        // Quality index
         if (!searchIndex.byQuality[item.quality]) {
             searchIndex.byQuality[item.quality] = [];
         }
         searchIndex.byQuality[item.quality].push(index);
         
-        // Lot number index
         if (item.lotNumber) {
             if (!searchIndex.byLotNumber[item.lotNumber]) {
                 searchIndex.byLotNumber[item.lotNumber] = [];
@@ -1665,11 +1640,10 @@ function buildSearchIndexes() {
             searchIndex.byLotNumber[item.lotNumber].push(index);
         }
         
-        // Notes index (word-based)
         if (item.notes) {
             const words = item.notes.toLowerCase().split(/\s+/);
             words.forEach(word => {
-                if (word.length > 2) { // Only index words longer than 2 chars
+                if (word.length > 2) {
                     if (!searchIndex.byNotes[word]) {
                         searchIndex.byNotes[word] = [];
                     }
@@ -1678,7 +1652,6 @@ function buildSearchIndexes() {
             });
         }
         
-        // Product type index
         if (!searchIndex.byProductType[item.productType]) {
             searchIndex.byProductType[item.productType] = [];
         }
@@ -1692,54 +1665,44 @@ function searchWithIndexes(searchTerm) {
     
     const resultIndices = new Set();
     
-    // Search in quality index
     Object.keys(searchIndex.byQuality).forEach(quality => {
         if (quality.toLowerCase().includes(term)) {
             searchIndex.byQuality[quality].forEach(idx => resultIndices.add(idx));
         }
     });
     
-    // Search in lot number index
     Object.keys(searchIndex.byLotNumber).forEach(lotNumber => {
         if (lotNumber.toLowerCase().includes(term)) {
             searchIndex.byLotNumber[lotNumber].forEach(idx => resultIndices.add(idx));
         }
     });
     
-    // Search in notes index
     Object.keys(searchIndex.byNotes).forEach(word => {
         if (word.includes(term)) {
             searchIndex.byNotes[word].forEach(idx => resultIndices.add(idx));
         }
     });
     
-    // Search in product type index
     Object.keys(searchIndex.byProductType).forEach(productType => {
         if (productType.toLowerCase().includes(term)) {
             searchIndex.byProductType[productType].forEach(idx => resultIndices.add(idx));
         }
     });
     
-    // Convert set to array of items
     return Array.from(resultIndices).map(idx => inventoryItems[idx]);
 }
 
-// After any data modification, rebuild indexes
 function afterDataModification() {
     localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
-    buildSearchIndexes(); // Rebuild indexes
-    displayPaginatedItems(); // Refresh display
+    buildSearchIndexes();
+    displayPaginatedItems();
     updateStats();
     updateGlobalQualityStats();
     updateActivityFeed();
     updateTotalInventory();
 }
 
-// ========================
-// NEW DASHBOARD FUNCTIONS
-// ========================
-
-// Dashboard chart animation
+// ================= DASHBOARD FUNCTIONS =================
 function animateCharts() {
     const bars = document.querySelectorAll('.chart-bar');
     bars.forEach(bar => {
@@ -1751,7 +1714,6 @@ function animateCharts() {
     });
 }
 
-// Quick actions functions
 function scrollToForm() {
     const formSection = document.querySelector('.form-section');
     if (formSection) {
@@ -1761,18 +1723,15 @@ function scrollToForm() {
     }
 }
 
-// ✅ YEH NAYA FUNCTION ADD KARIEN - generateReport() ko replace karien
 function generateReport() {
-    console.log('Inventory items:', inventoryItems); // ✅ DEBUG LINE
+    console.log('Inventory items:', inventoryItems);
     if (inventoryItems.length === 0) {
         showNotification('No inventory data to generate report!', 'warning');
         return;
     }
 
     try {
-        // Prepare data for Excel report
         const reportData = inventoryItems.map(item => {
-            // Handle colors format (simple ya detailed)
             let colorsFormatted = 'N/A';
             if (Array.isArray(item.colors) && item.colors.length > 0) {
                 if (typeof item.colors[0] === 'string') {
@@ -1782,10 +1741,8 @@ function generateReport() {
                 }
             }
 
-            // Handle sizes information
             let sizesInfo = '';
             if (item.sizeOption === 'same') {
-                // Same sizes for all colors
                 const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
                 sizes.forEach(size => {
                     const sizeValue = item[`size${size}`] || 0;
@@ -1795,7 +1752,6 @@ function generateReport() {
                 });
                 sizesInfo = sizesInfo.replace(/, $/, '');
             } else {
-                // Different sizes per color
                 sizesInfo = 'Multiple sizes (see details)';
             }
 
@@ -1819,42 +1775,37 @@ function generateReport() {
             };
         });
 
-        // Create worksheet
         const ws = XLSX.utils.json_to_sheet(reportData);
         
-        // Set column widths
         const columnWidths = [
-            { wch: 15 }, // Date Added
-            { wch: 12 }, // Time
-            { wch: 15 }, // Product Type
-            { wch: 15 }, // Quality
-            { wch: 12 }, // Lot Number
-            { wch: 20 }, // Colors
-            { wch: 25 }, // Sizes
-            { wch: 18 }, // Quantity
-            { wch: 15 }, // Pieces
-            { wch: 15 }, // Price/Dozen
-            { wch: 18 }, // Total Amount
-            { wch: 15 }, // Material
-            { wch: 15 }, // Weight
-            { wch: 12 }, // Status
-            { wch: 15 }, // Size Format
-            { wch: 25 }  // Notes
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 15 },
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 20 },
+            { wch: 25 },
+            { wch: 18 },
+            { wch: 15 },
+            { wch: 15 },
+            { wch: 18 },
+            { wch: 15 },
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 15 },
+            { wch: 25 }
         ];
         
         ws['!cols'] = columnWidths;
 
-        // Create workbook
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Inventory Report');
 
-        // Generate filename with timestamp
         const now = new Date();
         const dateStr = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
         const timeStr = `${now.getHours()}-${now.getMinutes()}`;
         const fileName = `ALISHAN_Inventory_Report_${dateStr}_${timeStr}.xlsx`;
 
-        // Download the file
         XLSX.writeFile(wb, fileName);
         
         showNotification('Excel report generated successfully! Check your downloads.', 'success');
@@ -1872,7 +1823,6 @@ function checkStock() {
     }
 }
 
-// Update activity feed
 function updateActivityFeed() {
     const feed = document.getElementById('activityFeed');
     if (!feed) return;
@@ -1893,7 +1843,6 @@ function updateActivityFeed() {
     });
 }
 
-// Update total inventory count
 function updateTotalInventory() {
     const totalElement = document.getElementById('totalInventoryItems');
     if (totalElement) {
@@ -1901,11 +1850,7 @@ function updateTotalInventory() {
     }
 }
 
-// ========================
-// NOTIFICATION SYSTEM
-// ========================
-
-// Notification system
+// ================= NOTIFICATION SYSTEM =================
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notificationContainer');
     if (!container) return;
@@ -1927,7 +1872,6 @@ function showNotification(message, type = 'info') {
     
     container.appendChild(notification);
     
-    // Auto remove after 5 seconds
     setTimeout(() => {
         if (notification.parentElement) {
             notification.style.animation = 'slideOut 0.3s ease';
@@ -1936,8 +1880,7 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-
-// Product type change event handler
+// ================= QUALITY DATA MANAGEMENT =================
 function setupProductTypeChangeListener() {
     const productTypeDropdown = document.getElementById('productType');
     if (productTypeDropdown) {
@@ -1947,7 +1890,6 @@ function setupProductTypeChangeListener() {
     }
 }
 
-// Edit modal ke liye bhi
 function setupEditProductTypeChangeListener() {
     const editProductTypeDropdown = document.getElementById('editProductType');
     if (editProductTypeDropdown) {
@@ -1957,62 +1899,51 @@ function setupEditProductTypeChangeListener() {
     }
 }
 
-// Quality options update function
 function updateQualityOptions(productType) {
     const qualityDropdown = document.getElementById('quality');
     if (!qualityDropdown || !window.qualityData) return;
     
-    // Clear existing options (first option ko chodkar)
     while (qualityDropdown.options.length > 1) {
         qualityDropdown.remove(1);
     }
     
-    // Get qualities for selected product type
     const qualities = window.qualityData[productType] || [];
     
-    // Add new options
     qualities.forEach(quality => {
         const option = new Option(quality, quality);
         qualityDropdown.add(option);
     });
 }
 
-// Edit modal ke liye quality options update function
 function updateEditQualityOptions(productType) {
     const editQualityDropdown = document.getElementById('editQuality');
     if (!editQualityDropdown || !window.qualityData) return;
     
-    // Clear existing options (first option ko chodkar)
     while (editQualityDropdown.options.length > 1) {
         editQualityDropdown.remove(1);
     }
     
-    // Get qualities for selected product type
     const qualities = window.qualityData[productType] || [];
     
-    // Add new options
     qualities.forEach(quality => {
         const option = new Option(quality, quality);
         editQualityDropdown.add(option);
     });
 }
 
-// Load qualities function ko update karein
 async function loadQualities() {
     try {
         const response = await fetch('qualities.json');
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
-        window.qualityData = await response.json(); // Global variable mein store karein
+        window.qualityData = await response.json();
         
-        // Setup event listeners
         setupProductTypeChangeListener();
         setupEditProductTypeChangeListener();
         
     } catch (error) {
         console.error('Could not load qualities:', error);
-        // Fallback data
         window.qualityData = {
             "bra": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "FLORA", "EAZY", "NANCY"],
             "panty": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "ADDITION", "FLORA", "EAZY"],
@@ -2020,45 +1951,34 @@ async function loadQualities() {
             "blouse": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"]
         };
         
-        // Setup event listeners
         setupProductTypeChangeListener();
         setupEditProductTypeChangeListener();
     }
 }
 
-// ========================
-// INITIALIZATION FUNCTION
-// ========================
-
-    // Initialize all functional
+// ================= APPLICATION INITIALIZATION =================
 async function initApp() {
     migrateOldData();
-    // ✅ YEH CODE UPDATE KAREN
-    // Load data with validation
+    
     inventoryItems = loadInventoryData();
     
-    // ✅ NAYA LINE: Qualities load karo
     await loadQualities(); 
     
-    // Show message if items were filtered
     if (localStorage.getItem('inventory_backup')) {
         showNotification('Some invalid items were filtered out. Check console for details.', 'warning');
     }
     
-    // Build search indexes after loading data
     buildSearchIndexes();
     
-    // Initialize components
-    // initFormTabs(); // ✅ YE LINE COMMENT OUT KAREN YA REMOVE - Single page form ke liye zaroori nahi
     initMobileMenu();
     
-    // Initialize size option toggles
+    initManualDateTime();
+    
     const sizeOptions = document.querySelectorAll('input[name="sizeOption"]');
     if (sizeOptions.length > 0) {
         sizeOptions.forEach(option => {
             option.addEventListener('change', toggleSizeOption);
         });
-        // Set default to same sizes
         const sameSizesOption = document.querySelector('input[name="sizeOption"][value="same"]');
         if (sameSizesOption) {
             sameSizesOption.checked = true;
@@ -2073,69 +1993,47 @@ async function initApp() {
         });
     }
     
-    // ✅ YEH LINE ADD KAREN - Pagination controls ko update karein
     updatePaginationControls();
     
-    // Update displays with pagination
-    displayPaginatedItems(); // Use pagination instead of direct render
+    displayPaginatedItems();
     updateStats();
     updateGlobalQualityStats();
     updateActivityFeed();
     updateTotalInventory();
     animateCharts();
-    // Initialize enhanced search system
+    
     initEnhancedSearch();
     buildSearchIndex();
     
+    const oldestItem = inventoryItems.length > 0 ? 
+        new Date(inventoryItems[inventoryItems.length - 1].dateTime).toLocaleDateString() : 'N/A';
+    const newestItem = inventoryItems.length > 0 ? 
+        new Date(inventoryItems[0].dateTime).toLocaleDateString() : 'N/A';
     
-    
-    
-    // Show inventory count
-    showNotification(`Loaded ${inventoryItems.length} inventory items`, 'success');
-    
-    
-    // Temporary testing ke liye - initApp function ke END mein add karein
-// YEH CODE ADD KAREN initApp function ke last mein:
-//console.log("Inventory items count:", inventoryItems.length);
-//console.log("Items per page:", itemsPerPage);
-//console.log("Total pages:", totalPages);
-
-// Force show pagination for testing
-//const paginationControls = document.getElementById('paginationControls');
-//if (paginationControls) {
-    //paginationControls.style.display = 'flex';
-//    paginationControls.style.border = '2px solid red'; // Visible hone ke liye
-//}
+    showNotification(`Loaded ${inventoryItems.length} items (${oldestItem} to ${newestItem})`, 'success');
 }
-// ========================
-// EVENT LISTENERS
-// ========================
 
-// Add event listener to form
+// ================= EVENT LISTENERS =================
 const productForm = document.getElementById('productForm');
 if (productForm) {
     productForm.addEventListener('submit', addInventoryItem);
 }
 
-// Add event listener to edit form
 const editForm = document.getElementById('editForm');
 if (editForm) {
     editForm.addEventListener('submit', updateItem);
 }
 
-// Add event listener to search button
 const searchBtn = document.getElementById('searchBtn');
 if (searchBtn) {
     searchBtn.addEventListener('click', searchItems);
 }
 
-// Add event listener to show all button
 const showAllBtn = document.getElementById('showAllBtn');
 if (showAllBtn) {
     showAllBtn.addEventListener('click', showAllItems);
 }
 
-// Add event listener to search input for Enter key
 const searchInput = document.getElementById('searchInput');
 if (searchInput) {
     searchInput.addEventListener('keypress', function(e) {
@@ -2145,148 +2043,9 @@ if (searchInput) {
     });
 }
 
-// Start the app when document is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initApp();
 });
-
-// Dynamic color class generation
-function generateColorClass(colorName, bgColor, textColor, borderColor) {
-    const style = document.createElement('style');
-    style.textContent = `
-        .color-${colorName.toLowerCase()} {
-            background-color: ${bgColor};
-            color: ${textColor};
-            border: 1px solid ${borderColor};
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// Predefine some common colors
-const predefinedColors = {
-    'brown': ['#efebe9', '#795548', '#795548'],
-    'gray': ['#f5f5f5', '#9e9e9e', '#9e9e9e'],
-    'teal': ['#e0f2f1', '#009688', '#009688'],
-    'indigo': ['#e8eaf6', '#3f51b5', '#3f51b5'],
-    'cyan': ['#e0f7fa', '#00bcd4', '#00bcd4'],
-    'lime': ['#f9fbe7', '#cddc39', '#cddc39'],
-    'maroon': ['#fce4ec', '#c2185b', '#c2185b'],
-    'navy': ['#e3f2fd', '#1565c0', '#1565c0'],
-    'olive': ['#f1f8e9', '#558b2f', '#558b2f'],
-    'silver': ['#f5f5f5', '#757575', '#757575'],
-    'coral': ['#ffebee', '#ff5252', '#ff5252']
-};
-
-// Generate classes for predefined colors
-Object.entries(predefinedColors).forEach(([name, colors]) => {
-    generateColorClass(name, colors[0], colors[1], colors[2]);
-});
-
-// ✅ YEH CODE OPTIONAL HAI, AGAR CLOUD SYNC CHAHIYE TO ADD KAREN
-// Cloud sync with validation
-async function syncWithCloud() {
-    try {
-        // Validate data before syncing
-        const validItems = inventoryItems.filter(item => validateInventoryItem(item));
-        const invalidItems = inventoryItems.filter(item => !validateInventoryItem(item));
-        
-        if (invalidItems.length > 0) {
-            console.warn('Not syncing invalid items:', invalidItems);
-            showNotification(`${invalidItems.length} invalid items not synced`, 'warning');
-        }
-        
-        // Sync only valid items
-        const response = await fetch('https://your-cloud-api.com/sync', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                items: validItems,
-                timestamp: Date.now()
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Sync failed');
-        }
-        
-        showNotification('Data synced successfully', 'success');
-        return true;
-        
-    } catch (error) {
-        console.error('Sync error:', error);
-        showNotification('Sync failed. Data saved locally.', 'error');
-        return false;
-    }
-}
-
-// Cloud sync button ke liye event listener (agar chahiye to)
-const cloudSyncBtn = document.getElementById('cloudSyncBtn');
-if (cloudSyncBtn) {
-    cloudSyncBtn.addEventListener('click', syncWithCloud);
-}
-
-// ================= MOBILE MENU FUNCTIONS =================
-// Mobile menu toggle functionality
-function initMobileMenu() {
-    const menuToggle = document.getElementById('menuToggle');
-    const mobileNav = document.getElementById('mobileNav');
-    
-    if (menuToggle && mobileNav) {
-        menuToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            mobileNav.classList.toggle('active');
-            
-            // Update icon
-            const icon = menuToggle.querySelector('i');
-            if (mobileNav.classList.contains('active')) {
-                icon.classList.remove('fa-bars');
-                icon.classList.add('fa-times');
-            } else {
-                icon.classList.remove('fa-times');
-                icon.classList.add('fa-bars');
-            }
-        });
-        
-        // Close menu when clicking outside
-        document.addEventListener('click', function(event) {
-            if (mobileNav.classList.contains('active') && 
-                !mobileNav.contains(event.target) && 
-                !menuToggle.contains(event.target)) {
-                closeMobileMenu();
-            }
-        });
-        
-        // Close menu when a link is clicked
-        const navLinks = mobileNav.querySelectorAll('a');
-        navLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                closeMobileMenu();
-            });
-        });
-    }
-}
-
-// Close mobile menu function
-function closeMobileMenu() {
-    const mobileNav = document.getElementById('mobileNav');
-    const menuToggle = document.getElementById('menuToggle');
-    
-    if (mobileNav) {
-        mobileNav.classList.remove('active');
-    }
-    
-    if (menuToggle) {
-        const icon = menuToggle.querySelector('i');
-        icon.classList.remove('fa-times');
-        icon.classList.add('fa-bars');
-    }
-}
-// ================= END MOBILE MENU FUNCTIONS =================
-
-
 
 // ================= ENHANCED SEARCH SYSTEM =================
 function initEnhancedSearch() {
@@ -2297,11 +2056,9 @@ function initEnhancedSearch() {
     suggestionsList.id = 'suggestionsList';
     suggestionsList.className = 'suggestions-dropdown';
     
-    // Add suggestions container to DOM
     const searchContainer = searchInput.closest('.search-bar-wrapper') || searchInput.parentNode;
     searchContainer.appendChild(suggestionsList);
     
-    // Event listeners
     searchInput.addEventListener('focus', showSearchHistory);
     searchInput.addEventListener('input', debounce(handleSearchInput, 300));
     searchInput.addEventListener('keydown', handleKeyboardNavigation);
@@ -2348,13 +2105,11 @@ function showSearchHistory() {
         return;
     }
     
-    // Add clear history button
     const clearLi = document.createElement('li');
     clearLi.className = 'suggestion-header';
     clearLi.innerHTML = '<span>Recent Searches</span><button onclick="clearSearchHistory()" class="clear-history-btn">Clear</button>';
     suggestionsList.appendChild(clearLi);
     
-    // Show recent searches (max 7)
     searchHistory.slice(-7).reverse().forEach((query, index) => {
         const li = document.createElement('li');
         li.className = 'suggestion-item history-item';
@@ -2393,7 +2148,6 @@ function generateSuggestions(query) {
     const suggestions = [];
     const queryLower = query.toLowerCase();
     
-    // Search qualities
     searchIndex.qualities.forEach(quality => {
         if (quality.toLowerCase().includes(queryLower)) {
             suggestions.push({
@@ -2404,7 +2158,6 @@ function generateSuggestions(query) {
         }
     });
     
-    // Search lot numbers
     searchIndex.lotNumbers.forEach(lotNumber => {
         if (lotNumber.includes(query)) {
             suggestions.push({
@@ -2416,7 +2169,6 @@ function generateSuggestions(query) {
         }
     });
     
-    // Search colors
     searchIndex.colors.forEach(color => {
         if (color.toLowerCase().includes(queryLower)) {
             suggestions.push({
@@ -2428,7 +2180,6 @@ function generateSuggestions(query) {
         }
     });
     
-    // Fuzzy search for qualities
     if (suggestions.length < 5) {
         searchIndex.qualities.forEach(quality => {
             if (fuzzyMatch(quality, queryLower) && !suggestions.some(s => s.text === quality)) {
@@ -2442,7 +2193,6 @@ function generateSuggestions(query) {
         });
     }
     
-    // Weight results
     suggestions.sort((a, b) => {
         const weightA = a.type === 'quality' ? 3 : a.type === 'lot' ? 2 : 1;
         const weightB = b.type === 'quality' ? 3 : b.type === 'lot' ? 2 : 1;
@@ -2619,7 +2369,7 @@ function showSearchAnalytics() {
     `;
     
     sortedAnalytics.forEach(([query, data], index) => {
-        if (index < 10) { // Show top 10 only
+        if (index < 10) {
             analyticsHTML += `
                 <div class="analytics-item">
                     <div class="analytics-rank">${index + 1}</div>
@@ -2638,7 +2388,6 @@ function showSearchAnalytics() {
         analyticsContainer.innerHTML = analyticsHTML;
     }
     
-    // Show modal
     const analyticsModal = document.getElementById('analyticsModal');
     if (analyticsModal) {
         analyticsModal.style.display = 'flex';
@@ -2652,36 +2401,73 @@ function closeModal(modalId) {
     }
 }
 
-// Make sure to call buildSearchIndex when inventory updates
-function afterDataModification() {
-    localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
-    buildSearchIndex(); // Rebuild search index
-    displayPaginatedItems();
-    updateStats();
-    updateGlobalQualityStats();
-    updateActivityFeed();
-    updateTotalInventory();
+// ================= MOBILE MENU FUNCTIONS =================
+function initMobileMenu() {
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileNav = document.getElementById('mobileNav');
+    
+    if (menuToggle && mobileNav) {
+        menuToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            mobileNav.classList.toggle('active');
+            
+            const icon = menuToggle.querySelector('i');
+            if (mobileNav.classList.contains('active')) {
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+            } else {
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            }
+        });
+        
+        document.addEventListener('click', function(event) {
+            if (mobileNav.classList.contains('active') && 
+                !mobileNav.contains(event.target) && 
+                !menuToggle.contains(event.target)) {
+                closeMobileMenu();
+            }
+        });
+        
+        const navLinks = mobileNav.querySelectorAll('a');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                closeMobileMenu();
+            });
+        });
+    }
 }
 
-// ================= MOBILE PERFORMANCE OPTIMIZATION ================= 
+function closeMobileMenu() {
+    const mobileNav = document.getElementById('mobileNav');
+    const menuToggle = document.getElementById('menuToggle');
+    
+    if (mobileNav) {
+        mobileNav.classList.remove('active');
+    }
+    
+    if (menuToggle) {
+        const icon = menuToggle.querySelector('i');
+        icon.classList.remove('fa-times');
+        icon.classList.add('fa-bars');
+    }
+}
+
+// ================= MOBILE PERFORMANCE OPTIMIZATION =================
 function optimizeForMobile() {
     if (window.innerWidth <= 768) {
-        // Reduce animations on mobile
         document.documentElement.style.setProperty('--transition', 'all 0.2s ease');
         
-        // Debounce scroll events for better performance
         let scrollTimeout;
         window.addEventListener('scroll', function() {
             clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(function() {
-                // Hide non-essential elements during scroll
                 document.querySelectorAll('.card-content').forEach(el => {
                     el.style.opacity = '0.95';
                 });
             }, 100);
         });
         
-        // Restore opacity after scroll
         window.addEventListener('scrollend', function() {
             document.querySelectorAll('.card-content').forEach(el => {
                 el.style.opacity = '1';
@@ -2690,16 +2476,8 @@ function optimizeForMobile() {
     }
 }
 
-// Initialize on load and resize
-document.addEventListener('DOMContentLoaded', function() {
-    optimizeForMobile();
-    window.addEventListener('resize', optimizeForMobile);
-});
-
-// Mobile-friendly hover effects
 function setupMobileHover() {
     if ('ontouchstart' in window) {
-        // Replace hover effects with touch effects
         document.querySelectorAll('.inventory-card').forEach(card => {
             card.addEventListener('touchstart', function() {
                 this.style.transform = 'scale(0.98)';
@@ -2711,3 +2489,8 @@ function setupMobileHover() {
         });
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+});
