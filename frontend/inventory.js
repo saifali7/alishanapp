@@ -1,204 +1,3 @@
-
-
-// ================= GOOGLE CLOUD INTEGRATION =================
-
-// Initialize Google Cloud services
-async function initializeGoogleCloud() {
-    try {
-        await googleCloudManager.initializeGoogleApis();
-        
-        // Check if already connected
-        const savedToken = localStorage.getItem('googleDriveToken');
-        if (savedToken) {
-            googleCloudManager.accessToken = savedToken;
-            googleCloudManager.updateConnectionStatus();
-        }
-        
-        console.log('Google Cloud services initialized');
-    } catch (error) {
-        console.error('Error initializing Google Cloud:', error);
-    }
-}
-
-// Connect to Google Drive
-async function connectGoogleDrive() {
-    showNotification('🔗 Connecting to Google Drive...', 'info');
-    
-    try {
-        const success = await googleCloudManager.authenticate();
-        if (success) {
-            // Create ALISHAN folder if it doesn't exist
-            await googleCloudManager.createFolder('ALISHAN_Backups');
-        }
-    } catch (error) {
-        console.error('Google Drive connection error:', error);
-        showNotification('❌ Google Drive connection failed: ' + error.message, 'error');
-    }
-}
-
-// Upload backup to Google Drive
-async function backupToGoogleDrive() {
-    if (!googleCloudManager.isConnected()) {
-        showNotification('❌ Please connect to Google Drive first', 'error');
-        return;
-    }
-    
-    showNotification('☁️ Creating Google Drive backup...', 'info');
-    
-    try {
-        const backupData = {
-            metadata: {
-                type: "GOOGLE_DRIVE_BACKUP",
-                created: new Date().toISOString(),
-                totalItems: inventoryItems.length,
-                system: "ALISHAN_INVENTORY",
-                version: "2.0"
-            },
-            inventory: inventoryItems
-        };
-        
-        // Generate file name
-        const date = new Date();
-        const fileName = `ALISHAN_Backup_${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}.json`;
-        
-        // Upload to Google Drive
-        const result = await googleCloudManager.uploadToDrive(
-            fileName,
-            JSON.stringify(backupData, null, 2),
-            'application/json'
-        );
-        
-        showNotification(`✅ Backup uploaded to Google Drive!`, 'success');
-        logAudit('backup', 'google_drive_backup', `Backup uploaded: ${fileName}`);
-        
-    } catch (error) {
-        console.error('Google Drive backup error:', error);
-        showNotification('❌ Google Drive backup failed: ' + error.message, 'error');
-    }
-}
-
-// Restore from Google Drive
-async function restoreFromGoogleDrive() {
-    if (!googleCloudManager.isConnected()) {
-        showNotification('❌ Please connect to Google Drive first', 'error');
-        return;
-    }
-    
-    try {
-        // Show available backups
-        const backupFiles = await googleCloudManager.searchBackupFiles();
-        
-        if (backupFiles.length === 0) {
-            showNotification('❌ No backup files found in Google Drive', 'warning');
-            return;
-        }
-        
-        // Create backup selection modal
-        showBackupSelectionModal(backupFiles);
-        
-    } catch (error) {
-        console.error('Error listing backup files:', error);
-        showNotification('❌ Failed to list backup files', 'error');
-    }
-}
-
-// Show backup selection modal
-function showBackupSelectionModal(backupFiles) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.style.display = 'flex';
-    
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2><i class="fab fa-google-drive"></i> Select Backup to Restore</h2>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">&times;</button>
-            </div>
-            
-            <div class="backup-list">
-                ${backupFiles.map(file => `
-                    <div class="backup-item" onclick="selectBackupFile('${file.id}', '${file.name}')">
-                        <div class="backup-info">
-                            <h4>${file.name}</h4>
-                            <p>Created: ${new Date(file.createdTime).toLocaleString()}</p>
-                            ${file.size ? `<p>Size: ${(parseInt(file.size) / 1024).toFixed(2)} KB</p>` : ''}
-                        </div>
-                        <button class="btn btn-info btn-sm" onclick="event.stopPropagation(); previewBackupFile('${file.id}')">
-                            <i class="fas fa-eye"></i> Preview
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Cancel</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-// Select backup file for restoration
-async function selectBackupFile(fileId, fileName) {
-    const confirmation = confirm(`Restore from backup: ${fileName}? This will replace all current data.`);
-    if (!confirmation) return;
-    
-    showNotification('🔄 Restoring from Google Drive...', 'info');
-    
-    try {
-        // Download backup file
-        const fileContent = await googleCloudManager.downloadFromDrive(fileId);
-        const backupData = JSON.parse(fileContent);
-        
-        // Validate backup data
-        if (!backupData.inventory || !Array.isArray(backupData.inventory)) {
-            throw new Error('Invalid backup file format');
-        }
-        
-        // Replace current data
-        inventoryItems = backupData.inventory;
-        localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
-        
-        // Update UI
-        renderInventoryCards();
-        updateDashboard();
-        
-        showNotification('✅ Data restored from Google Drive successfully!', 'success');
-        logAudit('backup', 'google_drive_restore', `Data restored from: ${fileName}`);
-        
-        // Close modal
-        document.querySelector('.modal').remove();
-        
-    } catch (error) {
-        console.error('Google Drive restore error:', error);
-        showNotification('❌ Restore failed: ' + error.message, 'error');
-    }
-}
-
-// Preview backup file
-async function previewBackupFile(fileId) {
-    try {
-        const fileContent = await googleCloudManager.downloadFromDrive(fileId);
-        const backupData = JSON.parse(fileContent);
-        
-        const preview = `
-File: ${backupData.metadata?.type || 'Unknown'}
-Created: ${backupData.metadata?.created || 'Unknown'}
-Items: ${backupData.inventory?.length || 0}
-Encrypted: ${backupData.metadata?.encrypted ? 'Yes' : 'No'}
-        `;
-        
-        alert('Backup Preview:\n\n' + preview);
-        
-    } catch (error) {
-        console.error('Preview error:', error);
-        showNotification('❌ Failed to preview backup', 'error');
-    }
-}
-
-
-
 // Data storage
 let inventoryItems = [];
 let filteredItems = [];
@@ -214,24 +13,6 @@ async function initPage() {
     updatePaginationControls();
     renderInventoryCards();
     await loadQualities();
-        // Initialize Google Cloud services
-    await initializeGoogleCloud();
-    
-    
-    
-    
-        // ✅ YE NAYA CODE ADD KAREN - Backend se initialize karein
-    try {
-        await googleCloudManager.initializeGoogleApis();
-        console.log("✅ Google Cloud initialized with backend config");
-    } catch (error) {
-        console.error("❌ Google Cloud initialization failed:", error);
-        showNotification('Google Drive integration unavailable', 'warning');
-    }
-    
-    
-    
-    
     
     // Set up event listeners
     document.getElementById('editForm').addEventListener('submit', function(e) {
@@ -257,40 +38,87 @@ function loadInventoryData() {
     }
 }
 
-// Update dashboard with summary stats
+// ✅ FIXED: Common calculation function for both dashboard and cards
+function calculateItemTotalAmount(item) {
+    if (!item || typeof item !== 'object') return 0;
+    
+    const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+    let totalDozensAllColors = 0;
+    
+    const hasColors = Array.isArray(item.colors) && item.colors.length > 0;
+    const isSimpleColorFormat = hasColors && typeof item.colors[0] === 'string';
+    const price = Number(item.price) || 0;
+    
+    if (isSimpleColorFormat) {
+        // Simple format calculation
+        let sizeTotal = 0;
+        sizes.forEach(size => {
+            sizeTotal += Number(item[`size${size}`]) || 0;
+        });
+        totalDozensAllColors = sizeTotal * item.colors.length;
+    } else if (hasColors) {
+        // Complex format calculation
+        item.colors.forEach(color => {
+            if (color && color.sizes) {
+                let colorTotal = 0;
+                sizes.forEach(size => {
+                    colorTotal += Number(color.sizes[`size${size}`]) || 0;
+                });
+                totalDozensAllColors += colorTotal;
+            }
+        });
+    }
+    
+    return totalDozensAllColors * price;
+}
+
+// ✅ FIXED: Dashboard with correct total value calculation
 function updateDashboard() {
+    if (!Array.isArray(inventoryItems)) {
+        console.error('Inventory items is not an array');
+        return;
+    }
+    
     // Count total items
     const totalItems = inventoryItems.length;
     
-    // Calculate total inventory value
+    // ✅ USE COMMON FUNCTION for total value
     const totalValue = inventoryItems.reduce((total, item) => {
-        return total + (item.totalDozens * item.price);
+        return total + calculateItemTotalAmount(item);
     }, 0);
     
-    // Count in-stock items
-    const inStockItems = inventoryItems.filter(item => item.inStock).length;
+    // Other calculations
+    const inStockItems = inventoryItems.filter(item => Boolean(item.inStock)).length;
     
-    // Count aging items (more than 8 days in stock)
     const now = new Date();
     const agingItems = inventoryItems.filter(item => {
+        if (!item.dateTime) return false;
         const addedDate = new Date(item.dateTime);
         const daysInStock = Math.floor((now - addedDate) / (1000 * 60 * 60 * 24));
         return daysInStock > 8;
     }).length;
     
-    // Update dashboard cards
-    document.getElementById('totalItems').textContent = totalItems;
-    document.getElementById('totalValue').textContent = '₹' + totalValue.toLocaleString();
-    document.getElementById('inStockItems').textContent = inStockItems;
-    document.getElementById('agingItems').textContent = agingItems;
+    // Update UI
+    const totalItemsElement = document.getElementById('totalItems');
+    const totalValueElement = document.getElementById('totalValue');
+    const inStockItemsElement = document.getElementById('inStockItems');
+    const agingItemsElement = document.getElementById('agingItems');
+    
+    if (totalItemsElement) totalItemsElement.textContent = totalItems;
+    if (totalValueElement) totalValueElement.textContent = '₹' + totalValue.toLocaleString('en-IN');
+    if (inStockItemsElement) inStockItemsElement.textContent = inStockItems;
+    if (agingItemsElement) agingItemsElement.textContent = agingItems;
+    
+    console.log("Dashboard Updated - Total Value:", totalValue, "Total Items:", totalItems);
 }
 
 // Populate quality filter dropdown
 function populateQualityFilter() {
     const qualityFilter = document.getElementById('qualityFilter');
+    if (!qualityFilter) return;
     
     // Get unique qualities
-    const qualities = [...new Set(inventoryItems.map(item => item.quality))];
+    const qualities = [...new Set(inventoryItems.map(item => item.quality).filter(Boolean))];
     
     // Clear existing options except the first one
     while (qualityFilter.options.length > 1) {
@@ -308,14 +136,14 @@ function populateQualityFilter() {
 
 // Apply filters to inventory data
 function applyFilters() {
-    const productTypeFilter = document.getElementById('productTypeFilter').value;
-    const qualityFilter = document.getElementById('qualityFilter').value;
-    const stockFilter = document.getElementById('stockFilter').value;
-    const dateFilter = document.getElementById('dateFilter').value;
+    const productTypeFilter = document.getElementById('productTypeFilter')?.value || 'all';
+    const qualityFilter = document.getElementById('qualityFilter')?.value || 'all';
+    const stockFilter = document.getElementById('stockFilter')?.value || 'all';
+    const dateFilter = document.getElementById('dateFilter')?.value || 'all';
     
     filteredItems = inventoryItems.filter(item => {
         // Product type filter
-        if (productTypeFilter !== 'all' && item.productType.toLowerCase() !== productTypeFilter) {
+        if (productTypeFilter !== 'all' && item.productType?.toLowerCase() !== productTypeFilter) {
             return false;
         }
         
@@ -326,12 +154,13 @@ function applyFilters() {
         
         // Stock status filter
         if (stockFilter !== 'all') {
-            if (stockFilter === 'inStock' && !item.inStock) return false;
-            if (stockFilter === 'outOfStock' && item.inStock) return false;
+            const isInStock = Boolean(item.inStock);
+            if (stockFilter === 'inStock' && !isInStock) return false;
+            if (stockFilter === 'outOfStock' && isInStock) return false;
         }
         
         // Date filter
-        if (dateFilter !== 'all') {
+        if (dateFilter !== 'all' && item.dateTime) {
             const itemDate = new Date(item.dateTime);
             const today = new Date();
             
@@ -358,12 +187,18 @@ function applyFilters() {
 
 // Clear all filters
 function clearFilters() {
-    document.getElementById('productTypeFilter').value = 'all';
-    document.getElementById('qualityFilter').value = 'all';
-    document.getElementById('stockFilter').value = 'all';
-    document.getElementById('dateFilter').value = 'all';
+    const productTypeFilter = document.getElementById('productTypeFilter');
+    const qualityFilter = document.getElementById('qualityFilter');
+    const stockFilter = document.getElementById('stockFilter');
+    const dateFilter = document.getElementById('dateFilter');
+    
+    if (productTypeFilter) productTypeFilter.value = 'all';
+    if (qualityFilter) qualityFilter.value = 'all';
+    if (stockFilter) stockFilter.value = 'all';
+    if (dateFilter) dateFilter.value = 'all';
     
     filteredItems = [...inventoryItems];
+    currentPage = 1;
     renderInventoryCards();
     showNotification('Filters cleared successfully.', 'success');
 }
@@ -377,17 +212,18 @@ function handleSearch(event) {
 
 // Perform search
 function performSearch() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
     
     if (!searchTerm) {
         filteredItems = [...inventoryItems];
     } else {
         filteredItems = inventoryItems.filter(item => {
-            return (
-                item.quality.toLowerCase().includes(searchTerm) ||
-                (item.lotNumber && item.lotNumber.toLowerCase().includes(searchTerm)) ||
-                (item.notes && item.notes.toLowerCase().includes(searchTerm))
-            );
+            const matchesQuality = item.quality?.toLowerCase().includes(searchTerm);
+            const matchesLotNumber = item.lotNumber?.toLowerCase().includes(searchTerm);
+            const matchesNotes = item.notes?.toLowerCase().includes(searchTerm);
+            
+            return matchesQuality || matchesLotNumber || matchesNotes;
         });
     }
     
@@ -399,6 +235,8 @@ function performSearch() {
 // Render inventory cards
 function renderInventoryCards() {
     const inventoryCards = document.getElementById('inventoryCards');
+    if (!inventoryCards) return;
+    
     inventoryCards.innerHTML = '';
     
     if (filteredItems.length === 0) {
@@ -422,24 +260,28 @@ function renderInventoryCards() {
     const fragment = document.createDocumentFragment();
     
     // Sort by date (newest first)
-    const sortedItems = [...pageItems].sort((a, b) =>
-        new Date(b.dateTime) - new Date(a.dateTime)
-    );
+    const sortedItems = [...pageItems].sort((a, b) => {
+        const dateA = new Date(a.dateTime || 0);
+        const dateB = new Date(b.dateTime || 0);
+        return dateB - dateA;
+    });
     
     sortedItems.forEach((item) => {
         const originalIndex = inventoryItems.findIndex(i => i.id === item.id);
         const card = createInventoryCard(item, originalIndex);
-        fragment.appendChild(card);
+        if (card) {
+            fragment.appendChild(card);
+        }
     });
     
-    inventoryCards.innerHTML = '';
     inventoryCards.appendChild(fragment);
-    
     updatePaginationControls();
 }
 
 // Function to create inventory card
 function createInventoryCard(item, index) {
+    if (!item || typeof item !== 'object') return null;
+    
     const card = document.createElement('div');
     card.className = 'inventory-card';
     
@@ -459,29 +301,8 @@ function createInventoryCard(item, index) {
     const hasColors = Array.isArray(item.colors) && item.colors.length > 0;
     const isSimpleColorFormat = hasColors && typeof item.colors[0] === 'string';
     
-    // Calculate totals
-    const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
-    let totalDozensAllColors = 0;
-    
-    if (isSimpleColorFormat) {
-        // For simple format (colors as strings)
-        sizes.forEach(size => {
-            totalDozensAllColors += item[`size${size}`] || 0;
-        });
-        totalDozensAllColors = totalDozensAllColors * item.colors.length;
-    } else if (hasColors) {
-        // For complex format (colors as objects with sizes)
-        item.colors.forEach(color => {
-            let colorTotal = 0;
-            sizes.forEach(size => {
-                colorTotal += color.sizes[`size${size}`] || 0;
-            });
-            totalDozensAllColors += colorTotal;
-        });
-    }
-    
-    // Calculate total amount
-    const totalAmount = totalDozensAllColors * item.price;
+    // ✅ USE COMMON FUNCTION for total amount
+    const totalAmount = calculateItemTotalAmount(item);
     
     // Create color tags
     let colorTags = '';
@@ -493,10 +314,32 @@ function createInventoryCard(item, index) {
             }).join('');
         } else {
             colorTags = item.colors.map(color => {
-                const colorClass = `color-${color.name.toLowerCase()}`;
+                const colorClass = `color-${color.name?.toLowerCase() || 'default'}`;
                 return `<span class="color-tag ${colorClass}">${color.name}</span>`;
             }).join('');
         }
+    }
+    
+    // Calculate total dozens for display
+    const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+    let totalDozensAllColors = 0;
+    
+    if (isSimpleColorFormat) {
+        let sizeTotal = 0;
+        sizes.forEach(size => {
+            sizeTotal += Number(item[`size${size}`]) || 0;
+        });
+        totalDozensAllColors = sizeTotal * item.colors.length;
+    } else if (hasColors) {
+        item.colors.forEach(color => {
+            if (color && color.sizes) {
+                let colorTotal = 0;
+                sizes.forEach(size => {
+                    colorTotal += Number(color.sizes[`size${size}`]) || 0;
+                });
+                totalDozensAllColors += colorTotal;
+            }
+        });
     }
     
     // Create card content based on format type
@@ -518,7 +361,7 @@ function createInventoryCard(item, index) {
                     </div>
                     <div class="calculation-step">
                         <span class="step-label">TOTAL DOZENS:</span>
-                        <span class="step-value">${item.totalDozens}</span>
+                        <span class="step-value">${item.totalDozens || 0}</span>
                     </div>
                 </div>
                 
@@ -554,7 +397,7 @@ function createInventoryCard(item, index) {
                         </div>
                         <div class="calculation-step">
                             <span class="step-label">PRICE PER DOZEN:</span>
-                            <span class="step-value">₹${item.price}</span>
+                            <span class="step-value">₹${item.price || 0}</span>
                         </div>
                     </div>
                 </div>
@@ -562,10 +405,12 @@ function createInventoryCard(item, index) {
         `;
     } else if (hasColors) {
         // Complex format layout
-        const colorSizeTables = item.colors.map(color => {
+        const colorSizeTables = item.colors.map((color, colorIndex) => {
+            if (!color) return '';
+            
             let colorTotal = 0;
             const sizeItems = sizes.map(size => {
-                const sizeValue = color.sizes[`size${size}`] || 0;
+                const sizeValue = color.sizes ? (Number(color.sizes[`size${size}`]) || 0) : 0;
                 colorTotal += sizeValue;
                 return `
                     <div class="size-item">
@@ -575,12 +420,12 @@ function createInventoryCard(item, index) {
                 `;
             }).join('');
             
-            const colorClass = `color-${color.name.toLowerCase()}`;
+            const colorClass = `color-${color.name?.toLowerCase() || 'default'}`;
             return `
                 <div class="color-size-table">
                     <div class="color-header ${colorClass}">
                         <i class="fas fa-circle" style="color: inherit;"></i>
-                        ${color.name} - TOTAL: ${colorTotal} DOZENS
+                        ${color.name || 'Unnamed Color'} - TOTAL: ${colorTotal} DOZENS
                     </div>
                     <div class="size-chart">
                         ${sizeItems}
@@ -624,7 +469,7 @@ function createInventoryCard(item, index) {
                     <div class="calculation-steps">
                         <div class="calculation-step">
                             <span class="step-label">PRICE PER DOZEN:</span>
-                            <span class="step-value">₹${item.price}</span>
+                            <span class="step-value">₹${item.price || 0}</span>
                         </div>
                     </div>
                 </div>
@@ -645,14 +490,14 @@ function createInventoryCard(item, index) {
     card.innerHTML = `
         <div class="card-header">
             <div>
-                <h3>${item.quality} (Lot: ${item.lotNumber || 'N/A'})</h3>
+                <h3>${item.quality || 'Unknown Quality'} (Lot: ${item.lotNumber || 'N/A'})</h3>
                 <div class="datetime">
                     ${formattedDate}, ${formattedTime}
                     ${item.code ? `<span class="unique-code">(Unique Code: ${item.code})</span>` : ''}
                 </div>
             </div>
             <div>
-                <span class="card-badge badge-primary">${item.productType}</span>
+                <span class="card-badge badge-primary">${item.productType || 'Unknown'}</span>
                 ${item.cupSize && item.cupSize !== 'N/A' ?
                 `<span class="card-badge" style="background-color: #4cc9f0; color: white;">${item.cupSize} CUP</span>` : ''}
             </div>
@@ -666,7 +511,7 @@ function createInventoryCard(item, index) {
                     <h4><i class="fas fa-info-circle"></i> PRODUCT DETAILS</h4>
                     <div class="detail-item">
                         <span class="detail-label">MATERIAL:</span>
-                        <span class="detail-value">${item.material} M</span>
+                        <span class="detail-value">${item.material || 0} M</span>
                     </div>
                     
                     <div class="detail-item">
@@ -676,7 +521,7 @@ function createInventoryCard(item, index) {
                     
                     <div class="detail-item">
                         <span class="detail-label">WEIGHT:</span>
-                        <span class="detail-value">${item.weight} KG</span>
+                        <span class="detail-value">${item.weight || 0} KG</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">STATUS:</span>
@@ -690,12 +535,21 @@ function createInventoryCard(item, index) {
                         <span class="detail-label">LOT NUMBER:</span>
                         <span class="detail-value">${item.lotNumber || 'N/A'}</span>
                     </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">ENTRY DATE:</span>
+                        <span class="detail-value">
+                            <i class="fas fa-calendar"></i> ${new Date(item.addedDateTime || item.dateTime).toLocaleDateString()}
+                        </span>
+                    </div>
+                    
                     <div class="detail-item">
                         <span class="detail-label">NOTES:</span>
                         <span class="detail-value">${item.notes || 'N/A'}</span>
                     </div>
                 </div>
             </div>
+            
         </div>
         
         <div class="card-footer">
@@ -713,7 +567,7 @@ function createInventoryCard(item, index) {
             
             <div class="total-price">
                 <span class="total-label">TOTAL AMOUNT</span>
-                <span class="total-amount">₹${totalAmount.toLocaleString()}</span>
+                <span class="total-amount">₹${totalAmount.toLocaleString('en-IN')}</span>
             </div>
         </div>
     `;
@@ -723,6 +577,11 @@ function createInventoryCard(item, index) {
 
 // Function to open edit modal
 function openEditModal(index) {
+    if (index < 0 || index >= inventoryItems.length) {
+        showNotification('Invalid item index', 'error');
+        return;
+    }
+    
     const item = inventoryItems[index];
     const editModal = document.getElementById('editModal');
     
@@ -743,14 +602,14 @@ function openEditModal(index) {
 
     // Populate form with item data
     document.getElementById('editIndex').value = index;
-    document.getElementById('editProductType').value = item.productType.toLowerCase();
-    updateEditQualityOptions(item.productType.toLowerCase());
+    document.getElementById('editProductType').value = item.productType?.toLowerCase() || '';
+    updateEditQualityOptions(item.productType?.toLowerCase() || '');
     document.getElementById('editCupSize').value = item.cupSize || '';
-    document.getElementById('editLotNumber').value = item.lotNumber;
-    document.getElementById('editQuality').value = item.quality;
-    document.getElementById('editMaterial').value = item.material;
-    document.getElementById('editWeight').value = item.weight;
-    document.getElementById('editPrice').value = item.price;
+    document.getElementById('editLotNumber').value = item.lotNumber || '';
+    document.getElementById('editQuality').value = item.quality || '';
+    document.getElementById('editMaterial').value = item.material || '';
+    document.getElementById('editWeight').value = item.weight || '';
+    document.getElementById('editPrice').value = item.price || '';
     document.getElementById('editNotes').value = item.notes || '';
     
     // Size option based on item type
@@ -775,8 +634,10 @@ function openEditModal(index) {
         });
         
         // Show same sizes container, hide different
-        document.getElementById('editSameSizesContainer').style.display = 'block';
-        document.getElementById('editDifferentSizesContainer').style.display = 'none';
+        const sameContainer = document.getElementById('editSameSizesContainer');
+        const diffContainer = document.getElementById('editDifferentSizesContainer');
+        if (sameContainer) sameContainer.style.display = 'block';
+        if (diffContainer) diffContainer.style.display = 'none';
         
     } else {
         const differentSizesOption = document.querySelector('input[name="editSizeOption"][value="different"]');
@@ -796,6 +657,8 @@ function openEditModal(index) {
             
             if (Array.isArray(item.colors) && item.colors.length > 0) {
                 item.colors.forEach((colorObj, colorIndex) => {
+                    if (!colorObj) return;
+                    
                     const colorSizeItem = document.createElement('div');
                     colorSizeItem.className = 'color-size-item';
                     colorSizeItem.innerHTML = `
@@ -811,7 +674,7 @@ function openEditModal(index) {
                             ${[28, 30, 32, 34, 36, 38, 40, 42, 44, 46].map(size => `
                                 <div class="size-input-group">
                                     <label>Size ${size}</label>
-                                    <input type="number" class="edit-color-size-${size}" value="${colorObj.sizes[`size${size}`] || 0}" min="0" step="1" placeholder="Dozens">
+                                    <input type="number" class="edit-color-size-${size}" value="${colorObj.sizes ? (colorObj.sizes[`size${size}`] || 0) : 0}" min="0" step="1" placeholder="Dozens">
                                 </div>
                             `).join('')}
                         </div>
@@ -822,8 +685,10 @@ function openEditModal(index) {
         }
         
         // Show different sizes container, hide same
-        document.getElementById('editSameSizesContainer').style.display = 'none';
-        document.getElementById('editDifferentSizesContainer').style.display = 'block';
+        const sameContainer = document.getElementById('editSameSizesContainer');
+        const diffContainer = document.getElementById('editDifferentSizesContainer');
+        if (sameContainer) sameContainer.style.display = 'none';
+        if (diffContainer) diffContainer.style.display = 'block';
     }
     
     // Add event listener for size option change
@@ -878,7 +743,7 @@ function convertSameToDifferentSizes(item) {
                 </div>
                 <div class="form-group">
                     <label>Color Name</label>
-                    <input type="text" class="edit-color-name" value="${typeof colorName === 'string' ? colorName : colorName.name}" placeholder="Enter color name">
+                    <input type="text" class="edit-color-name" value="${typeof colorName === 'string' ? colorName : (colorName.name || '')}" placeholder="Enter color name">
                 </div>
                 <div class="size-grid">
                     ${sizeInputsHTML}
@@ -890,8 +755,10 @@ function convertSameToDifferentSizes(item) {
     }
     
     // Show different sizes container, hide same
-    document.getElementById('editSameSizesContainer').style.display = 'none';
-    document.getElementById('editDifferentSizesContainer').style.display = 'block';
+    const sameContainer = document.getElementById('editSameSizesContainer');
+    const diffContainer = document.getElementById('editDifferentSizesContainer');
+    if (sameContainer) sameContainer.style.display = 'none';
+    if (diffContainer) diffContainer.style.display = 'block';
 }
 
 // Function to toggle edit size option
@@ -995,18 +862,23 @@ function closeEditModal() {
 function updateItem(e) {
     e.preventDefault();
     
-    const index = document.getElementById('editIndex').value;
+    const index = parseInt(document.getElementById('editIndex').value);
+    if (isNaN(index) || index < 0 || index >= inventoryItems.length) {
+        showNotification('Invalid item index', 'error');
+        return;
+    }
+    
     const item = inventoryItems[index];
     
     // Get form values
-    const productType = document.getElementById('editProductType').value;
-    const cupSize = document.getElementById('editCupSize').value;
-    const lotNumber = document.getElementById('editLotNumber').value;
-    const quality = document.getElementById('editQuality').value;
-    const material = parseFloat(document.getElementById('editMaterial').value) || 0;
-    const weight = parseFloat(document.getElementById('editWeight').value) || 0;
-    const price = parseFloat(document.getElementById('editPrice').value) || 0;
-    const notes = document.getElementById('editNotes').value;
+    const productType = document.getElementById('editProductType')?.value || '';
+    const cupSize = document.getElementById('editCupSize')?.value || '';
+    const lotNumber = document.getElementById('editLotNumber')?.value || '';
+    const quality = document.getElementById('editQuality')?.value || '';
+    const material = parseFloat(document.getElementById('editMaterial')?.value) || 0;
+    const weight = parseFloat(document.getElementById('editWeight')?.value) || 0;
+    const price = parseFloat(document.getElementById('editPrice')?.value) || 0;
+    const notes = document.getElementById('editNotes')?.value || '';
     
     // Validate required fields
     if (!productType) {
@@ -1016,6 +888,11 @@ function updateItem(e) {
     
     if (!quality) {
         showNotification('Quality Name is required', 'error');
+        return;
+    }
+    
+    if (price <= 0) {
+        showNotification('Valid Price is required', 'error');
         return;
     }
     
@@ -1049,10 +926,13 @@ function updateItem(e) {
         sizes.forEach(size => {
             const element = document.getElementById(`editSize${size}`);
             if (element) {
-                sizeData[`size${size}`] = parseInt(element.value) || 0;
-                totalDozens += parseInt(element.value) || 0;
+                const sizeValue = parseInt(element.value) || 0;
+                sizeData[`size${size}`] = sizeValue;
+                totalDozens += sizeValue;
             }
         });
+        
+        totalDozens = totalDozens * colors.length;
     } else {
         // Different sizes for each color - EDIT MODAL
         const editColorSizeItems = document.getElementById('editColorSizeItems');
@@ -1135,7 +1015,7 @@ function updateItem(e) {
     
     // Update display
     renderInventoryCards();
-    updateDashboard();
+    updateDashboard(); // ✅ FIXED: Dashboard update after edit
     
     // Close modal
     closeEditModal();
@@ -1146,11 +1026,17 @@ function updateItem(e) {
 
 // Function to delete item
 function deleteItem(index) {
+    if (index < 0 || index >= inventoryItems.length) {
+        showNotification('Invalid item index', 'error');
+        return;
+    }
+    
     if (confirm('Are you sure you want to delete this item?')) {
         inventoryItems.splice(index, 1);
         localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
         loadInventoryData();
         applyFilters();
+        updateDashboard(); // ✅ FIXED: Dashboard update after delete
         
         showNotification('Item deleted successfully', 'success');
     }
@@ -1158,27 +1044,38 @@ function deleteItem(index) {
 
 // Function to toggle stock status
 function toggleStock(index) {
+    if (index < 0 || index >= inventoryItems.length) {
+        showNotification('Invalid item index', 'error');
+        return;
+    }
+    
     inventoryItems[index].inStock = !inventoryItems[index].inStock;
     localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
     renderInventoryCards();
-    updateDashboard();
+    updateDashboard(); // ✅ FIXED: Dashboard update after stock toggle
     
     showNotification(`Item marked as ${inventoryItems[index].inStock ? 'In Stock' : 'Out of Stock'}`, 'success');
 }
 
 // Show export modal
 function showExportModal() {
-    document.getElementById('exportModal').style.display = 'flex';
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        exportModal.style.display = 'flex';
+    }
 }
 
 // Close export modal
 function closeExportModal() {
-    document.getElementById('exportModal').style.display = 'none';
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        exportModal.style.display = 'none';
+    }
 }
 
 // Export inventory data
 function exportInventory(format) {
-    const exportAll = document.getElementById('exportAll').checked;
+    const exportAll = document.getElementById('exportAll')?.checked || false;
     const dataToExport = exportAll ? inventoryItems : filteredItems;
     
     if (dataToExport.length === 0) {
@@ -1194,17 +1091,19 @@ function exportInventory(format) {
                 item.colors.map(c => c.name).join(', ')) : 
             'N/A';
         
+        const totalAmount = calculateItemTotalAmount(item); // ✅ USE COMMON FUNCTION
+        
         return {
-            'Date Added': new Date(item.dateTime).toLocaleDateString(),
-            'Time': new Date(item.dateTime).toLocaleTimeString(),
-            'Product Type': item.productType,
-            'Quality': item.quality,
+            'Date Added': item.dateTime ? new Date(item.dateTime).toLocaleDateString() : 'N/A',
+            'Time': item.dateTime ? new Date(item.dateTime).toLocaleTimeString() : 'N/A',
+            'Product Type': item.productType || 'N/A',
+            'Quality': item.quality || 'N/A',
             'Lot Number': item.lotNumber || 'N/A',
             'Colors': colors,
-            'Quantity (Dozens)': item.totalDozens,
-            'Total Pieces': item.totalPieces,
-            'Price/Dozen': item.price,
-            'Total Amount': '₹' + (item.totalDozens * item.price).toLocaleString(),
+            'Quantity (Dozens)': item.totalDozens || 0,
+            'Total Pieces': item.totalPieces || 0,
+            'Price/Dozen': item.price || 0,
+            'Total Amount': '₹' + totalAmount.toLocaleString('en-IN'),
             'Material (m)': item.material || 0,
             'Weight (kg)': item.weight || 0,
             'Status': item.inStock ? 'In Stock' : 'Out of Stock',
@@ -1423,7 +1322,7 @@ function prevPage() {
 }
 
 function changeItemsPerPage(value) {
-    itemsPerPage = parseInt(value);
+    itemsPerPage = parseInt(value) || 50;
     currentPage = 1;
     renderInventoryCards();
     updatePaginationControls();
@@ -1493,23 +1392,29 @@ function exportCompleteBackup() {
 }
 
 function showImportModal() {
-    document.getElementById('importModal').style.display = 'flex';
+    const importModal = document.getElementById('importModal');
+    if (importModal) {
+        importModal.style.display = 'flex';
+    }
 }
 
 function closeImportModal() {
-    document.getElementById('importModal').style.display = 'none';
+    const importModal = document.getElementById('importModal');
+    if (importModal) {
+        importModal.style.display = 'none';
+    }
 }
 
 function handleImport() {
     const fileInput = document.getElementById('importFile');
-    const file = fileInput.files[0];
+    const file = fileInput?.files[0];
     
     if (!file) {
         showNotification('Please select a file to import', 'error');
         return;
     }
     
-    const importOption = document.querySelector('input[name="importOption"]:checked').value;
+    const importOption = document.querySelector('input[name="importOption"]:checked')?.value || 'replace';
     importBackupData(file, importOption);
 }
 
@@ -1546,7 +1451,7 @@ function importBackupData(file, importOption) {
             // Update display
             loadInventoryData();
             renderInventoryCards();
-            updateDashboard();
+            updateDashboard(); // ✅ FIXED: Dashboard update after import
             
             showNotification(`Successfully imported ${backupData.inventory.length} items!`, 'success');
             closeImportModal();
@@ -1561,11 +1466,17 @@ function importBackupData(file, importOption) {
 }
 
 function showBackupSettingsModal() {
-    document.getElementById('backupSettingsModal').style.display = 'flex';
+    const backupSettingsModal = document.getElementById('backupSettingsModal');
+    if (backupSettingsModal) {
+        backupSettingsModal.style.display = 'flex';
+    }
 }
 
 function closeBackupSettingsModal() {
-    document.getElementById('backupSettingsModal').style.display = 'none';
+    const backupSettingsModal = document.getElementById('backupSettingsModal');
+    if (backupSettingsModal) {
+        backupSettingsModal.style.display = 'none';
+    }
 }
 
 function createBackupNow() {
@@ -1573,25 +1484,31 @@ function createBackupNow() {
     closeBackupSettingsModal();
 }
 
-// ================= ADVANCED EXPORT SYSTEM - NEW ADDED =================
+// ================= ADVANCED EXPORT SYSTEM =================
 
 // Show advanced export modal
 function showAdvancedExportModal() {
-    document.getElementById('advancedExportModal').style.display = 'flex';
-    populateExportQualities();
-    populateCustomQualities();
-    updateExportSummary();
-    closeExportModal(); // Close basic export modal
+    const advancedExportModal = document.getElementById('advancedExportModal');
+    if (advancedExportModal) {
+        advancedExportModal.style.display = 'flex';
+        populateExportQualities();
+        populateCustomQualities();
+        updateExportSummary();
+        closeExportModal(); // Close basic export modal
+    }
 }
 
 // Close advanced export modal
 function closeAdvancedExportModal() {
-    document.getElementById('advancedExportModal').style.display = 'none';
+    const advancedExportModal = document.getElementById('advancedExportModal');
+    if (advancedExportModal) {
+        advancedExportModal.style.display = 'none';
+    }
 }
 
 // Toggle export options based on selection
 function toggleExportOptions() {
-    const exportType = document.getElementById('exportType').value;
+    const exportType = document.getElementById('exportType')?.value || 'complete';
     
     // Sab options hide karo
     const allOptions = document.querySelectorAll('.export-sub-options');
@@ -1609,7 +1526,9 @@ function toggleExportOptions() {
 // Populate quality dropdowns
 function populateExportQualities() {
     const qualitySelect = document.getElementById('exportQuality');
-    const qualities = [...new Set(inventoryItems.map(item => item.quality))].sort();
+    if (!qualitySelect) return;
+    
+    const qualities = [...new Set(inventoryItems.map(item => item.quality).filter(Boolean))].sort();
     
     qualitySelect.innerHTML = '<option value="">All Qualities</option>';
     qualities.forEach(quality => {
@@ -1622,7 +1541,9 @@ function populateExportQualities() {
 
 function populateCustomQualities() {
     const customQualitySelect = document.getElementById('customQuality');
-    const qualities = [...new Set(inventoryItems.map(item => item.quality))].sort();
+    if (!customQualitySelect) return;
+    
+    const qualities = [...new Set(inventoryItems.map(item => item.quality).filter(Boolean))].sort();
     
     customQualitySelect.innerHTML = '<option value="">All Qualities</option>';
     qualities.forEach(quality => {
@@ -1635,10 +1556,12 @@ function populateCustomQualities() {
 
 // Update export summary preview
 async function updateExportSummary() {
-    const exportType = document.getElementById('exportType').value;
+    const exportType = document.getElementById('exportType')?.value || 'complete';
     const summaryElement = document.getElementById('summaryText');
     const detailsElement = document.getElementById('summaryDetails');
     const summaryContainer = document.getElementById('exportSummary');
+    
+    if (!summaryElement || !detailsElement || !summaryContainer) return;
     
     let filteredData = [];
     let summaryText = '';
@@ -1653,36 +1576,36 @@ async function updateExportSummary() {
             
         case 'dateRange':
             filteredData = await filterByDateRange();
-            const fromDate = document.getElementById('exportFromDate').value;
-            const toDate = document.getElementById('exportToDate').value;
+            const fromDate = document.getElementById('exportFromDate')?.value || '';
+            const toDate = document.getElementById('exportToDate')?.value || '';
             summaryText = `📅 Date Range Export`;
             detailsHTML = `From: <strong>${fromDate || 'Not set'}</strong><br>To: <strong>${toDate || 'Not set'}</strong><br>Matching Items: <strong>${filteredData.length}</strong>`;
             break;
             
         case 'quality':
             filteredData = await filterByQuality();
-            const quality = document.getElementById('exportQuality').value;
+            const quality = document.getElementById('exportQuality')?.value || '';
             summaryText = `🎯 Quality Based Export`;
             detailsHTML = `Quality: <strong>${quality || 'All'}</strong><br>Matching Items: <strong>${filteredData.length}</strong>`;
             break;
             
         case 'productType':
             filteredData = await filterByProductType();
-            const productType = document.getElementById('exportProductType').value;
+            const productType = document.getElementById('exportProductType')?.value || '';
             summaryText = `👕 Product Type Export`;
             detailsHTML = `Product Type: <strong>${productType || 'All'}</strong><br>Matching Items: <strong>${filteredData.length}</strong>`;
             break;
             
         case 'lotNumber':
             filteredData = await filterByLotNumber();
-            const lotNumber = document.getElementById('exportLotNumber').value;
+            const lotNumber = document.getElementById('exportLotNumber')?.value || '';
             summaryText = `🏷️ Lot Number Export`;
             detailsHTML = `Lot Number: <strong>${lotNumber || 'Not specified'}</strong><br>Matching Items: <strong>${filteredData.length}</strong>`;
             break;
             
         case 'uniqueCode':
             filteredData = await filterByUniqueCode();
-            const uniqueCode = document.getElementById('exportUniqueCode').value;
+            const uniqueCode = document.getElementById('exportUniqueCode')?.value || '';
             summaryText = `🔖 Unique Code Export`;
             detailsHTML = `Unique Code: <strong>${uniqueCode || 'Not specified'}</strong><br>Matching Items: <strong>${filteredData.length}</strong>`;
             break;
@@ -1702,8 +1625,8 @@ async function updateExportSummary() {
 // ================= FILTER FUNCTIONS FOR EXPORT =================
 
 async function filterByDateRange() {
-    const fromDate = document.getElementById('exportFromDate').value;
-    const toDate = document.getElementById('exportToDate').value;
+    const fromDate = document.getElementById('exportFromDate')?.value;
+    const toDate = document.getElementById('exportToDate')?.value;
     
     if (!fromDate || !toDate) return inventoryItems;
     
@@ -1712,29 +1635,30 @@ async function filterByDateRange() {
     to.setHours(23, 59, 59, 999); // End of day
     
     return inventoryItems.filter(item => {
+        if (!item.dateTime) return false;
         const itemDate = new Date(item.dateTime);
         return itemDate >= from && itemDate <= to;
     });
 }
 
 async function filterByQuality() {
-    const quality = document.getElementById('exportQuality').value;
+    const quality = document.getElementById('exportQuality')?.value;
     if (!quality) return inventoryItems;
     
     return inventoryItems.filter(item => item.quality === quality);
 }
 
 async function filterByProductType() {
-    const productType = document.getElementById('exportProductType').value;
-    if (productType === 'all') return inventoryItems;
+    const productType = document.getElementById('exportProductType')?.value;
+    if (!productType || productType === 'all') return inventoryItems;
     
     return inventoryItems.filter(item => 
-        item.productType.toLowerCase() === productType.toLowerCase()
+        item.productType?.toLowerCase() === productType.toLowerCase()
     );
 }
 
 async function filterByLotNumber() {
-    const lotNumber = document.getElementById('exportLotNumber').value.trim();
+    const lotNumber = document.getElementById('exportLotNumber')?.value?.trim();
     if (!lotNumber) return inventoryItems;
     
     return inventoryItems.filter(item => 
@@ -1743,7 +1667,7 @@ async function filterByLotNumber() {
 }
 
 async function filterByUniqueCode() {
-    const uniqueCode = document.getElementById('exportUniqueCode').value.trim();
+    const uniqueCode = document.getElementById('exportUniqueCode')?.value?.trim();
     if (!uniqueCode) return inventoryItems;
     
     return inventoryItems.filter(item => 
@@ -1752,13 +1676,13 @@ async function filterByUniqueCode() {
 }
 
 async function filterByCustom() {
-    const productType = document.getElementById('customProductType').value;
-    const quality = document.getElementById('customQuality').value;
-    const stockStatus = document.getElementById('customStockStatus').value;
+    const productType = document.getElementById('customProductType')?.value;
+    const quality = document.getElementById('customQuality')?.value;
+    const stockStatus = document.getElementById('customStockStatus')?.value || 'all';
     
     return inventoryItems.filter(item => {
         // Product type filter
-        if (productType && item.productType.toLowerCase() !== productType) {
+        if (productType && item.productType?.toLowerCase() !== productType) {
             return false;
         }
         
@@ -1769,8 +1693,9 @@ async function filterByCustom() {
         
         // Stock status filter
         if (stockStatus !== 'all') {
-            if (stockStatus === 'inStock' && !item.inStock) return false;
-            if (stockStatus === 'outOfStock' && item.inStock) return false;
+            const isInStock = Boolean(item.inStock);
+            if (stockStatus === 'inStock' && !isInStock) return false;
+            if (stockStatus === 'outOfStock' && isInStock) return false;
         }
         
         return true;
@@ -1780,7 +1705,7 @@ async function filterByCustom() {
 // ================= MAIN EXPORT EXECUTION =================
 
 async function executeAdvancedExport() {
-    const exportType = document.getElementById('exportType').value;
+    const exportType = document.getElementById('exportType')?.value || 'complete';
     let filteredData = [];
     
     showNotification('🔄 Processing export...', 'info');
@@ -1816,7 +1741,7 @@ async function executeAdvancedExport() {
     }
     
     // File name generate karo
-    const customFileName = document.getElementById('exportFileName').value.trim();
+    const customFileName = document.getElementById('exportFileName')?.value?.trim();
     let fileName = customFileName || generateExportFileName(exportType, filteredData);
     
     // Export karo
@@ -1840,28 +1765,28 @@ function generateExportFileName(exportType, data) {
     
     switch(exportType) {
         case 'dateRange':
-            const fromDate = document.getElementById('exportFromDate').value;
-            const toDate = document.getElementById('exportToDate').value;
+            const fromDate = document.getElementById('exportFromDate')?.value || '';
+            const toDate = document.getElementById('exportToDate')?.value || '';
             typeStr = `DATE_RANGE`;
             criteriaStr = `${fromDate}_to_${toDate}`;
             break;
         case 'quality':
-            const quality = document.getElementById('exportQuality').value;
+            const quality = document.getElementById('exportQuality')?.value || '';
             typeStr = `QUALITY`;
             criteriaStr = quality;
             break;
         case 'productType':
-            const productType = document.getElementById('exportProductType').value;
+            const productType = document.getElementById('exportProductType')?.value || '';
             typeStr = `PRODUCT_TYPE`;
             criteriaStr = productType;
             break;
         case 'lotNumber':
-            const lotNumber = document.getElementById('exportLotNumber').value;
+            const lotNumber = document.getElementById('exportLotNumber')?.value || '';
             typeStr = `LOT_NUMBER`;
             criteriaStr = lotNumber;
             break;
         case 'uniqueCode':
-            const uniqueCode = document.getElementById('exportUniqueCode').value;
+            const uniqueCode = document.getElementById('exportUniqueCode')?.value || '';
             typeStr = `UNIQUE_CODE`;
             criteriaStr = uniqueCode;
             break;
@@ -1900,30 +1825,30 @@ async function exportFilteredData(data, fileName) {
 }
 
 function getExportCriteria() {
-    const exportType = document.getElementById('exportType').value;
+    const exportType = document.getElementById('exportType')?.value || 'complete';
     let criteria = { type: exportType };
     
     switch(exportType) {
         case 'dateRange':
-            criteria.fromDate = document.getElementById('exportFromDate').value;
-            criteria.toDate = document.getElementById('exportToDate').value;
+            criteria.fromDate = document.getElementById('exportFromDate')?.value;
+            criteria.toDate = document.getElementById('exportToDate')?.value;
             break;
         case 'quality':
-            criteria.quality = document.getElementById('exportQuality').value;
+            criteria.quality = document.getElementById('exportQuality')?.value;
             break;
         case 'productType':
-            criteria.productType = document.getElementById('exportProductType').value;
+            criteria.productType = document.getElementById('exportProductType')?.value;
             break;
         case 'lotNumber':
-            criteria.lotNumber = document.getElementById('exportLotNumber').value;
+            criteria.lotNumber = document.getElementById('exportLotNumber')?.value;
             break;
         case 'uniqueCode':
-            criteria.uniqueCode = document.getElementById('exportUniqueCode').value;
+            criteria.uniqueCode = document.getElementById('exportUniqueCode')?.value;
             break;
         case 'customFilter':
-            criteria.productType = document.getElementById('customProductType').value;
-            criteria.quality = document.getElementById('customQuality').value;
-            criteria.stockStatus = document.getElementById('customStockStatus').value;
+            criteria.productType = document.getElementById('customProductType')?.value;
+            criteria.quality = document.getElementById('customQuality')?.value;
+            criteria.stockStatus = document.getElementById('customStockStatus')?.value;
             break;
     }
     
@@ -1993,137 +1918,3 @@ async function exportLargeDataInChunks(data, baseFileName) {
 
 // Initialize the page when loaded
 document.addEventListener('DOMContentLoaded', initPage);
-
-
-
-
-
-
-
-
-
-// Google Drive Status Update Function
-function updateGoogleDriveStatus() {
-    const statusElement = document.getElementById('driveStatus');
-    const backupBtn = document.getElementById('backupDriveBtn');
-    const restoreBtn = document.getElementById('restoreDriveBtn');
-    
-    if (!statusElement) return;
-    
-    const isConnected = localStorage.getItem('googleDriveConnected') === 'true';
-    
-    if (isConnected) {
-        statusElement.innerHTML = '<span style="color: #34a853;">✅ Connected to Google Drive</span>';
-        statusElement.innerHTML += '<br><small>You can now backup your data</small>';
-        
-        if (backupBtn) backupBtn.disabled = false;
-        if (restoreBtn) restoreBtn.disabled = false;
-    } else {
-        statusElement.innerHTML = '<span style="color: #ea4335;">❌ Not Connected to Google Drive</span>';
-        statusElement.innerHTML += '<br><small>Click "Connect Google Drive" to start</small>';
-        
-        if (backupBtn) backupBtn.disabled = true;
-        if (restoreBtn) restoreBtn.disabled = true;
-    }
-}
-
-// Initialize Google Drive Status on Page Load
-document.addEventListener('DOMContentLoaded', function() {
-    // Pehle status update karein
-    updateGoogleDriveStatus();
-    
-    // Har 5 second baad status check karein
-    setInterval(updateGoogleDriveStatus, 5000);
-});
-
-// Enhanced Backup Function with Better UI
-async function backupToGoogleDrive() {
-    const backupBtn = document.getElementById('backupDriveBtn');
-    const originalText = backupBtn.innerHTML;
-    
-    try {
-        // Loading state
-        backupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Backup...';
-        backupBtn.disabled = true;
-        
-        if (!googleCloudManager.isConnected()) {
-            throw new Error('Please connect to Google Drive first');
-        }
-        
-        // Show notification
-        showNotification('☁️ Creating Google Drive backup...', 'info');
-        
-        const backupData = {
-            metadata: {
-                type: "GOOGLE_DRIVE_BACKUP",
-                created: new Date().toISOString(),
-                totalItems: inventoryItems.length,
-                system: "ALISHAN_INVENTORY",
-                version: "2.0"
-            },
-            inventory: inventoryItems
-        };
-        
-        // Generate file name
-        const date = new Date();
-        const fileName = `ALISHAN_Backup_${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}_${date.getHours()}-${date.getMinutes()}.json`;
-        
-        // Upload to Google Drive
-        const result = await googleCloudManager.uploadToDrive(
-            fileName,
-            JSON.stringify(backupData, null, 2),
-            'application/json'
-        );
-        
-        showNotification(`✅ Backup uploaded to Google Drive!`, 'success');
-        
-        // Success state
-        backupBtn.innerHTML = '<i class="fas fa-check"></i> Backup Successful!';
-        setTimeout(() => {
-            backupBtn.innerHTML = originalText;
-            backupBtn.disabled = false;
-        }, 2000);
-        
-    } catch (error) {
-        console.error('Google Drive backup error:', error);
-        showNotification('❌ Backup failed: ' + error.message, 'error');
-        
-        // Error state
-        backupBtn.innerHTML = '<i class="fas fa-times"></i> Backup Failed';
-        setTimeout(() => {
-            backupBtn.innerHTML = originalText;
-            backupBtn.disabled = false;
-        }, 2000);
-    }
-}
-
-// Enhanced Connect Function
-async function connectGoogleDrive() {
-    const connectBtn = document.getElementById('connectDriveBtn');
-    const originalText = connectBtn.innerHTML;
-    
-    try {
-        connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
-        connectBtn.disabled = true;
-        
-        showNotification('🔗 Connecting to Google Drive...', 'info');
-        
-        const success = await googleCloudManager.authenticate();
-        if (success) {
-            showNotification('✅ Successfully connected to Google Drive!', 'success');
-            updateGoogleDriveStatus();
-        }
-        
-    } catch (error) {
-        console.error('Google Drive connection error:', error);
-        showNotification('❌ Connection failed: ' + error.message, 'error');
-    } finally {
-        connectBtn.innerHTML = originalText;
-        connectBtn.disabled = false;
-    }
-}
-
-
-
-
-
