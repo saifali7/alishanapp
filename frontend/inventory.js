@@ -458,7 +458,7 @@ function createInventoryCard(item, index) {
                     </div>
                 </div>
                 
-                <div class="divider">
+                <div class="divider">   
                     <div class="divider-line"></div>
                     <i class="fas fa-times divider-icon"></i>
                     <div class="divider-line"></div>
@@ -870,6 +870,20 @@ function updateItem(e) {
     
     const item = inventoryItems[index];
     
+    
+    
+    // ✅ ORIGINAL VALUES PRESERVE KAREIN
+const originalDateTime = item.dateTime;
+const originalAddedDateTime = item.addedDateTime;
+const originalIsManual = item.isManualEntry;
+    
+    
+    
+    
+    
+    
+    
+    
     // Get form values
     const productType = document.getElementById('editProductType')?.value || '';
     const cupSize = document.getElementById('editCupSize')?.value || '';
@@ -996,6 +1010,23 @@ function updateItem(e) {
     item.totalAmount = totalAmount;
     item.sizeOption = sizeOption.value;
     
+    
+    
+    
+    // ✅ ORIGINAL DATES PRESERVE KAREIN (IMPORTANT!)
+item.dateTime = originalDateTime;
+item.addedDateTime = originalAddedDateTime;
+item.isManualEntry = originalIsManual;
+
+
+    // ✅ Last modified timestamp add karein (optional)
+item.lastModified = new Date().toISOString();
+    
+    
+    
+    
+    
+    
     // Add size data for simple format
     if (sizeOption.value === 'same') {
         Object.assign(item, sizeData);
@@ -1008,7 +1039,7 @@ function updateItem(e) {
     }
     
     // Update date/time
-    item.dateTime = new Date().toISOString();
+    //item.dateTime = new Date().toISOString();
     
     // Save to localStorage
     localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
@@ -1276,7 +1307,7 @@ async function loadQualities() {
             "bra": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "FLORA", "EAZY", "NANCY"],
             "panty": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "ADDITION", "FLORA", "EAZY"],
             "set": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"],
-            "blause": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"]
+            "blouse": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"]
         };
         
         // Setup event listeners
