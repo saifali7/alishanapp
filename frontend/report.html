@@ -1034,7 +1034,6 @@
         
         .search-content {
             display: none;
-            margin-top: 15px;
         }
         
         .search-content.active {
@@ -1893,8 +1892,12 @@
         };
         
         // ================= FILTERING SYSTEM =================
-        
-        
+        let currentFilteredItems = [];
+        let activeFilters = {
+            timePeriod: '7',
+            productType: 'all',
+            quality: 'all'
+        };
         
         // Pagination variables
         let currentPage = 1;
@@ -1903,14 +1906,11 @@
         let searchTimeout = null;
         const SEARCH_DELAY = 300;
         
-        
-        
-        
-        
-        
-        
-        
-        
+        // ================= MANUAL DATE HANDLING =================
+        function isManualEntry(item) {
+            return item.isManualEntry || 
+                   (item.dateTime && new Date(item.dateTime) < new Date(Date.now() - 24 * 60 * 60 * 1000));
+        }
 
         // ================= INITIALIZATION =================
         function initPage() {
@@ -1931,68 +1931,40 @@
             checkLowStock();
         }
         
-        // Load data from localStorage
+        // Load data from localStorage with manual date handling
         function loadData() {
             try {
                 // Load inventory items
                 const inventoryData = localStorage.getItem('inventoryItems');
                 inventoryItems = inventoryData ? JSON.parse(inventoryData) : [];
                 
+                // ✅ MANUAL DATE ENTRIES KO PROPERLY HANDLE KAREIN
+                inventoryItems = inventoryItems.map(item => {
+                    if (item.isManualEntry && !item.addedDateTime) {
+                        item.addedDateTime = new Date().toISOString(); // Fallback
+                    }
+                    return item;
+                });
+                
                 // Load amount received data
                 const amountData = localStorage.getItem('amountReceived');
                 amountReceived = amountData ? JSON.parse(amountData) : [];
                 
-                // Data integrity check - remove any amount entries that point to inventory items that no longer exist
+                // ✅ DATA INTEGRITY CHECK IMPROVE KAREIN
                 const validInventoryIds = new Set(inventoryItems.map(item => item.id));
-                amountReceived = amountReceived.filter(amount => validInventoryIds.has(amount.inventoryId));
+                amountReceived = amountReceived.filter(amount => {
+                    const isValid = validInventoryIds.has(amount.inventoryId);
+                    if (!isValid) {
+                        console.log('Removing invalid amount entry:', amount);
+                    }
+                    return isValid;
+                });
                 
-                // Save the cleaned-up array back to localStorage
                 localStorage.setItem('amountReceived', JSON.stringify(amountReceived));
                 
-                // If no data, add sample data for testing
-                if (inventoryItems.length === 0) {
-                    inventoryItems = [
-                        {
-                            id: 1,
-                            code: "123456",
-                            quality: "Premium Cotton",
-                            lotNumber: "LOT001",
-                            productType: "Bra",
-                            totalDozens: 50,
-                            price: 1200,
-                            dateTime: "2025-09-01T10:00:00"
-                        },
-                        {
-                            id: 2,
-                            code: "654321",
-                            quality: "Standard Silk",
-                            lotNumber: "LOT002",
-                            productType: "Panty",
-                            totalDozens: 30,
-                            price: 800,
-                            dateTime: "2025-08-25T14:30:00"
-                        }
-                    ];
-                    localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
-                }
-
-                if (amountReceived.length === 0) {
-                    amountReceived = [
-                        {
-                            id: 1,
-                            inventoryId: 1,
-                            quality: "Premium Cotton",
-                            amount: 30000,
-                            date: "2025-09-02",
-                            notes: "Partial payment received",
-                            week: getWeekNumber(new Date("2025-09-02"))
-                        }
-                    ];
-                    localStorage.setItem('amountReceived', JSON.stringify(amountReceived));
-                }
             } catch (error) {
                 console.error('Error loading data:', error);
-                showNotification('Error loading data. Please check console for details.', 'error');
+                showNotification('Data loading error. Please refresh.', 'error');
             }
         }
         
@@ -2887,7 +2859,8 @@
                             expectedAmount: expectedAmount,
                             amountReceived: totalReceived,
                             pendingAmount: pendingAmount,
-                            dateAdded: item.dateTime
+                            dateAdded: item.dateTime,
+                            isManualEntry: item.isManualEntry // ✅ MANUAL DATE TRACKING
                         });
                     }
                 });
@@ -2905,9 +2878,13 @@
             const completionPercent = item.expectedAmount > 0 ? 
                 Math.round((item.amountReceived / item.expectedAmount) * 100) : 0;
             
+            // ✅ MANUAL DATE BADGE ADD KAREIN
+            const manualBadge = item.isManualEntry ? 
+                '<span class="badge-warning" style="margin-left: 8px; font-size: 0.7rem;">MANUAL DATE</span>' : '';
+            
             card.innerHTML = `
                 <div class="card-header">
-                    <div class="card-title">${item.quality}</div>
+                    <div class="card-title">${item.quality} ${manualBadge}</div>
                     <div class="card-lot">${item.lotNumber || 'No Lot'} <span class="unique-code">${item.code || ''}</span></div>
                 </div>
                 
@@ -2994,7 +2971,8 @@
                     expectedAmount: expectedAmount,
                     amountReceived: 0,
                     pendingAmount: expectedAmount,
-                    dateAdded: item.dateTime
+                    dateAdded: item.dateTime,
+                    isManualEntry: item.isManualEntry // ✅ MANUAL DATE PASS KAREIN
                 };
                 
                 const card = createPendingCard(cardData);
@@ -3461,6 +3439,32 @@
                 return;
             }
             
+            // ✅ DUPLICATE CHECK - SAME INVENTORY ID, SAME DATE, SAME AMOUNT
+            const isDuplicate = amountReceived.some(entry => 
+                entry.inventoryId === parseInt(inventoryId) && 
+                entry.date === date && 
+                entry.amount === amount
+            );
+            
+            if (isDuplicate) {
+                showNotification('This amount entry already exists!', 'error');
+                return;
+            }
+            
+            // ✅ EXISTING ENTRIES CHECK - SAME INVENTORY ID
+            const existingEntries = amountReceived.filter(entry => 
+                entry.inventoryId === parseInt(inventoryId)
+            );
+            
+            const totalReceived = existingEntries.reduce((sum, entry) => sum + entry.amount, 0);
+            const inventoryItem = inventoryItems.find(item => item.id === parseInt(inventoryId));
+            const expectedAmount = calculateExpectedAmount(inventoryItem);
+            
+            if (totalReceived + amount > expectedAmount) {
+                showNotification(`Amount exceeds expected value! Expected: ₹${expectedAmount}, Already received: ₹${totalReceived}`, 'error');
+                return;
+            }
+            
             // Create new amount received entry
             const newAmount = {
                 id: Date.now(),
@@ -3518,354 +3522,200 @@
         }
         
         // ================= FILTER FUNCTIONS =================
-        
-        
-        
-    // ================= FILTERING SYSTEM =================
-    let currentFilteredItems = [];
-    let activeFilters = {
-        timePeriod: '7',
-        productType: 'all',
-        quality: 'all'
-    };
-
-    // Initialize filters
-    function populateFilters() {
-        const qualityFilter = document.getElementById('qualityFilter');
-        
-        // Clear existing options (except the default "All Qualities")
-        qualityFilter.innerHTML = '<option value="all">All Qualities</option>';
-        
-        // Get unique qualities from inventory items
-        const qualities = [...new Set(inventoryItems.map(item => item.quality))];
-        
-        // Add quality options to the dropdown
-        qualities.forEach(quality => {
-            const option = document.createElement('option');
-            option.value = quality;
-            option.textContent = quality;
-            qualityFilter.appendChild(option);
-        });
-        
-        // Set up event listeners for filters
-        document.getElementById('timePeriod').addEventListener('change', function() {
-            activeFilters.timePeriod = this.value;
-            applyFilters();
-        });
-        
-        document.getElementById('productType').addEventListener('change', function() {
-            activeFilters.productType = this.value;
-            applyFilters();
-        });
-        
-        document.getElementById('qualityFilter').addEventListener('change', function() {
-            activeFilters.quality = this.value;
-            applyFilters();
-        });
-    }
-
-    // Apply filters function
-    function applyFilters() {
-        console.log('Applying filters:', activeFilters);
-        
-        // Start with all inventory items
-        currentFilteredItems = [...inventoryItems];
-        
-        // Apply time period filter
-        if (activeFilters.timePeriod !== 'all') {
-            const days = parseInt(activeFilters.timePeriod);
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - days);
+        function populateFilters() {
+            const qualityFilter = document.getElementById('qualityFilter');
             
-            currentFilteredItems = currentFilteredItems.filter(item => {
-                const itemDate = new Date(item.dateTime);
-                return itemDate >= cutoffDate;
+            // Clear existing options (except the default "All Qualities")
+            qualityFilter.innerHTML = '<option value="all">All Qualities</option>';
+            
+            // Get unique qualities from inventory items
+            const qualities = [...new Set(inventoryItems.map(item => item.quality))];
+            
+            // Add quality options to the dropdown
+            qualities.forEach(quality => {
+                const option = document.createElement('option');
+                option.value = quality;
+                option.textContent = quality;
+                qualityFilter.appendChild(option);
+            });
+            
+            // Set up event listeners for filters
+            document.getElementById('timePeriod').addEventListener('change', function() {
+                activeFilters.timePeriod = this.value;
+                applyFilters();
+            });
+            
+            document.getElementById('productType').addEventListener('change', function() {
+                activeFilters.productType = this.value;
+                applyFilters();
+            });
+            
+            document.getElementById('qualityFilter').addEventListener('change', function() {
+                activeFilters.quality = this.value;
+                applyFilters();
             });
         }
-        
-        // Apply product type filter
-        if (activeFilters.productType !== 'all') {
-            currentFilteredItems = currentFilteredItems.filter(item => 
-                item.productType.toLowerCase() === activeFilters.productType.toLowerCase()
-            );
-        }
-        
-        // Apply quality filter
-        if (activeFilters.quality !== 'all') {
-            currentFilteredItems = currentFilteredItems.filter(item => 
-                item.quality === activeFilters.quality
-            );
-        }
-        
-        // Update UI with filtered results
-        updateFilteredResults();
-        
-        showNotification(`Found ${currentFilteredItems.length} items matching your filters`, 'success');
-    }
 
-    // Update UI with filtered results
-    function updateFilteredResults() {
-        // Update dashboard with filtered data
-        updateDashboardWithFilteredData();
-        
-        // Update pending amounts tab
-        updatePendingAmountsTab();
-        
-        // Update other tabs as needed
-        // updateWeeklyTab();
-        // updateHistoryTab();
-        // updateValuationTab();
-        // updateAgingTab();
-    }
-
-    // Update dashboard with filtered data
-    function updateDashboardWithFilteredData() {
-        // Calculate total inventory value from filtered items
-        const totalValue = currentFilteredItems.reduce((total, item) => {
-            return total + calculateExpectedAmount(item);
-        }, 0);
-        
-        // Count total filtered items
-        const totalItems = currentFilteredItems.length;
-        
-        // Count aging items (more than 30 days in stock) from filtered items
-        const now = new Date();
-        const agingItems = currentFilteredItems.filter(item => {
-            const addedDate = new Date(item.dateTime);
-            const daysInStock = Math.floor((now - addedDate) / (1000 * 60 * 60 * 24));
-            return daysInStock > 30;
-        }).length;
-        
-        // Count items added this week from filtered items
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        const weeklyAdded = currentFilteredItems.filter(item => {
-            return new Date(item.dateTime) >= oneWeekAgo;
-        }).length;
-        
-        // Calculate total received and pending amounts from filtered items
-        let totalReceived = 0;
-        let totalPending = 0;
-        
-        currentFilteredItems.forEach(item => {
-            const expectedAmount = calculateExpectedAmount(item);
-            const receivedAmounts = amountReceived.filter(amount => amount.inventoryId === item.id);
-            const totalReceivedForItem = receivedAmounts.reduce((sum, amount) => sum + amount.amount, 0);
+        // Apply filters function
+        function applyFilters() {
+            console.log('Applying filters:', activeFilters);
             
-            totalReceived += totalReceivedForItem;
-            totalPending += (expectedAmount - totalReceivedForItem);
-        });
-        
-        // Update dashboard cards with filtered data
-        document.getElementById('totalValue').textContent = '₹' + totalValue.toLocaleString();
-        document.getElementById('totalItems').textContent = totalItems;
-        document.getElementById('agingItems').textContent = agingItems;
-        document.getElementById('weeklyAdded').textContent = weeklyAdded;
-        document.getElementById('receivedAmount').textContent = '₹' + totalReceived.toLocaleString();
-        document.getElementById('pendingAmount').textContent = '₹' + totalPending.toLocaleString();
-    }
-
-    // Update pending amounts tab with filtered data
-    function updatePendingAmountsTab() {
-        const pendingContainer = document.getElementById('pendingCardsContainer');
-        pendingContainer.innerHTML = '';
-        
-        // Get inventory items that don't have amount received entries FROM FILTERED ITEMS
-        const pendingItems = currentFilteredItems.filter(item => {
-            return !amountReceived.some(amount => amount.inventoryId === item.id);
-        });
-        
-        if (pendingItems.length === 0) {
-            pendingContainer.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: var(--gray);">
-                    <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 15px; color: var(--success);"></i>
-                    <h3>No Pending Amounts</h3>
-                    <p>All amounts have been received</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Add pending items as cards
-        pendingItems.forEach(item => {
-            const expectedAmount = calculateExpectedAmount(item);
+            // Start with all inventory items
+            currentFilteredItems = [...inventoryItems];
             
-            const cardData = {
-                id: item.id,
-                quality: item.quality,
-                lotNumber: item.lotNumber,
-                code: item.code,
-                productType: item.productType,
-                totalDozens: item.totalDozens,
-                expectedAmount: expectedAmount,
-                amountReceived: 0,
-                pendingAmount: expectedAmount,
-                dateAdded: item.dateTime
-            };
-            
-            const card = createPendingCard(cardData);
-            pendingContainer.appendChild(card);
-        });
-    }
-
-    // Clear all filters
-    function clearFilters() {
-        // Reset filter values
-        document.getElementById('timePeriod').value = '7';
-        document.getElementById('productType').value = 'all';
-        document.getElementById('qualityFilter').value = 'all';
-        
-        // Reset active filters
-        activeFilters = {
-            timePeriod: '7',
-            productType: 'all',
-            quality: 'all'
-        };
-        
-        // Show all items
-        currentFilteredItems = [...inventoryItems];
-        updateFilteredResults();
-        
-        showNotification('Filters cleared successfully', 'success');
-    }
-
-    // ================= ENHANCED SEARCH WITH FILTERING =================
-    function performSearch() {
-        const searchInput = document.getElementById('searchInput');
-        if (!searchInput) return;
-        
-        const searchTerm = searchInput.value.trim();
-        
-        // Hide suggestions
-        const suggestionsList = document.getElementById('suggestionsList');
-        if (suggestionsList) {
-            suggestionsList.style.display = 'none';
-        }
-        
-        if (!searchTerm) {
-            // If search is empty, apply current filters
-            applyFilters();
-            showNotification('Showing all inventory items', 'info');
-            return;
-        }
-        
-        // Perform search within filtered items (or all items if no filters applied)
-        const searchBase = currentFilteredItems.length > 0 ? currentFilteredItems : inventoryItems;
-        const searchTermLower = searchTerm.toLowerCase();
-        
-        const searchResults = searchBase.filter(item => {
-            return (
-                item.quality && item.quality.toLowerCase().includes(searchTermLower) ||
-                (item.lotNumber && item.lotNumber.toString().includes(searchTerm)) ||
-                (item.notes && item.notes.toLowerCase().includes(searchTermLower)) ||
-                (item.cupSize && item.cupSize.toLowerCase().includes(searchTermLower)) ||
-                (item.code && item.code.includes(searchTerm)) ||
-                // Colors search
-                (item.colors && Array.isArray(item.colors) &&
-                    item.colors.some(color =>
-                        typeof color === 'string' ?
-                        color.toLowerCase().includes(searchTermLower) :
-                        (color.name && color.name.toLowerCase().includes(searchTermLower))
-                    ))
-            );
-        });
-        
-        // Temporarily show search results
-        showSearchResultsInUI(searchResults, searchTerm);
-        
-        showNotification(`Found ${searchResults.length} items matching "${searchTerm}"`, 'info');
-    }
-
-    // Show search results in UI
-    function showSearchResultsInUI(results, searchTerm) {
-        // You can implement this based on which tab is active
-        const activeTab = document.querySelector('.tab.active');
-        if (activeTab) {
-            const tabName = activeTab.getAttribute('data-tab');
-            
-            switch(tabName) {
-                case 'pending':
-                    showSearchResultsInPendingTab(results, searchTerm);
-                    break;
-                case 'weekly':
-                    showSearchResultsInWeeklyTab(results, searchTerm);
-                    break;
-                // Add cases for other tabs as needed
-                default:
-                    showGenericSearchResults(results, searchTerm);
+            // Apply time period filter
+            if (activeFilters.timePeriod !== 'all') {
+                const days = parseInt(activeFilters.timePeriod);
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - days);
+                
+                currentFilteredItems = currentFilteredItems.filter(item => {
+                    const itemDate = new Date(item.dateTime);
+                    return itemDate >= cutoffDate;
+                });
             }
-        } else {
-            showGenericSearchResults(results, searchTerm);
-        }
-    }
-
-    // Show search results in pending tab
-    function showSearchResultsInPendingTab(results, searchTerm) {
-        const pendingContainer = document.getElementById('pendingCardsContainer');
-        pendingContainer.innerHTML = '';
-        
-        if (results.length === 0) {
-            pendingContainer.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: var(--gray);">
-                    <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                    <h3>No Results Found</h3>
-                    <p>No items matching "${searchTerm}"</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Highlight search term in results
-        results.forEach(item => {
-            const expectedAmount = calculateExpectedAmount(item);
-            const receivedAmounts = amountReceived.filter(amount => amount.inventoryId === item.id);
-            const totalReceived = receivedAmounts.reduce((sum, amount) => sum + amount.amount, 0);
-            const pendingAmount = expectedAmount - totalReceived;
             
-            const cardData = {
-                id: item.id,
-                quality: highlightSearchTerm(item.quality, searchTerm),
-                lotNumber: highlightSearchTerm(item.lotNumber || 'N/A', searchTerm),
-                code: item.code || 'N/A',
-                productType: item.productType,
-                totalDozens: item.totalDozens,
-                expectedAmount: expectedAmount,
-                amountReceived: totalReceived,
-                pendingAmount: pendingAmount,
-                dateAdded: item.dateTime
+            // Apply product type filter
+            if (activeFilters.productType !== 'all') {
+                currentFilteredItems = currentFilteredItems.filter(item => 
+                    item.productType.toLowerCase() === activeFilters.productType.toLowerCase()
+                );
+            }
+            
+            // Apply quality filter
+            if (activeFilters.quality !== 'all') {
+                currentFilteredItems = currentFilteredItems.filter(item => 
+                    item.quality === activeFilters.quality
+                );
+            }
+            
+            // Update UI with filtered results
+            updateFilteredResults();
+            
+            showNotification(`Found ${currentFilteredItems.length} items matching your filters`, 'success');
+        }
+
+        // Update UI with filtered results
+        function updateFilteredResults() {
+            // Update dashboard with filtered data
+            updateDashboardWithFilteredData();
+            
+            // Update pending amounts tab
+            updatePendingAmountsTab();
+        }
+
+        // Update dashboard with filtered data
+        function updateDashboardWithFilteredData() {
+            // Calculate total inventory value from filtered items
+            const totalValue = currentFilteredItems.reduce((total, item) => {
+                return total + calculateExpectedAmount(item);
+            }, 0);
+            
+            // Count total filtered items
+            const totalItems = currentFilteredItems.length;
+            
+            // Count aging items (more than 30 days in stock) from filtered items
+            const now = new Date();
+            const agingItems = currentFilteredItems.filter(item => {
+                const addedDate = new Date(item.dateTime);
+                const daysInStock = Math.floor((now - addedDate) / (1000 * 60 * 60 * 24));
+                return daysInStock > 30;
+            }).length;
+            
+            // Count items added this week from filtered items
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            const weeklyAdded = currentFilteredItems.filter(item => {
+                return new Date(item.dateTime) >= oneWeekAgo;
+            }).length;
+            
+            // Calculate total received and pending amounts from filtered items
+            let totalReceived = 0;
+            let totalPending = 0;
+            
+            currentFilteredItems.forEach(item => {
+                const expectedAmount = calculateExpectedAmount(item);
+                const receivedAmounts = amountReceived.filter(amount => amount.inventoryId === item.id);
+                const totalReceivedForItem = receivedAmounts.reduce((sum, amount) => sum + amount.amount, 0);
+                
+                totalReceived += totalReceivedForItem;
+                totalPending += (expectedAmount - totalReceivedForItem);
+            });
+            
+            // Update dashboard cards with filtered data
+            document.getElementById('totalValue').textContent = '₹' + totalValue.toLocaleString();
+            document.getElementById('totalItems').textContent = totalItems;
+            document.getElementById('agingItems').textContent = agingItems;
+            document.getElementById('weeklyAdded').textContent = weeklyAdded;
+            document.getElementById('receivedAmount').textContent = '₹' + totalReceived.toLocaleString();
+            document.getElementById('pendingAmount').textContent = '₹' + totalPending.toLocaleString();
+        }
+
+        // Update pending amounts tab with filtered data
+        function updatePendingAmountsTab() {
+            const pendingContainer = document.getElementById('pendingCardsContainer');
+            pendingContainer.innerHTML = '';
+            
+            // Get inventory items that don't have amount received entries FROM FILTERED ITEMS
+            const pendingItems = currentFilteredItems.filter(item => {
+                return !amountReceived.some(amount => amount.inventoryId === item.id);
+            });
+            
+            if (pendingItems.length === 0) {
+                pendingContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--gray);">
+                        <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 15px; color: var(--success);"></i>
+                        <h3>No Pending Amounts</h3>
+                        <p>All amounts have been received</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Add pending items as cards
+            pendingItems.forEach(item => {
+                const expectedAmount = calculateExpectedAmount(item);
+                
+                const cardData = {
+                    id: item.id,
+                    quality: item.quality,
+                    lotNumber: item.lotNumber,
+                    code: item.code,
+                    productType: item.productType,
+                    totalDozens: item.totalDozens,
+                    expectedAmount: expectedAmount,
+                    amountReceived: 0,
+                    pendingAmount: expectedAmount,
+                    dateAdded: item.dateTime,
+                    isManualEntry: item.isManualEntry
+                };
+                
+                const card = createPendingCard(cardData);
+                pendingContainer.appendChild(card);
+            });
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            // Reset filter values
+            document.getElementById('timePeriod').value = '7';
+            document.getElementById('productType').value = 'all';
+            document.getElementById('qualityFilter').value = 'all';
+            
+            // Reset active filters
+            activeFilters = {
+                timePeriod: '7',
+                productType: 'all',
+                quality: 'all'
             };
             
-            const card = createPendingCard(cardData);
-            pendingContainer.appendChild(card);
-        });
-    }
+            // Show all items
+            currentFilteredItems = [...inventoryItems];
+            updateFilteredResults();
+            
+            showNotification('Filters cleared successfully', 'success');
+        }
 
-    // Highlight search term in text
-    function highlightSearchTerm(text, searchTerm) {
-        if (!text || !searchTerm) return text;
-        
-        const regex = new RegExp(`(${searchTerm})`, 'gi');
-        return text.toString().replace(regex, '<mark>$1</mark>');
-    }
-
-    // Initialize the page when loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        initPage();
-        
-        // Apply initial filters
-        setTimeout(() => {
-            applyFilters();
-        }, 500);
-    });
-
-        
-        
-        
-        
-        
-        
-        
-        
         // ================= EXPORT FUNCTIONS =================
         function showExportModal() {
             document.getElementById('exportModal').style.display = 'flex';
@@ -4001,7 +3851,8 @@
                     'Quantity (Dozens)': item.totalDozens,
                     'Expected Amount (₹)': expectedAmount,
                     'Days in Stock': daysInStock,
-                    'Status': 'Pending'
+                    'Status': 'Pending',
+                    'Manual Entry': item.isManualEntry ? 'Yes' : 'No'
                 };
             });
         }
@@ -4144,7 +3995,8 @@
                     'Lot Number': item.lotNumber || 'N/A',
                     'Days in Stock': item.daysInStock,
                     'Quantity (Dozens)': item.totalDozens,
-                    'Value (₹)': calculateExpectedAmount(item)
+                    'Value (₹)': calculateExpectedAmount(item),
+                    'Manual Entry': item.isManualEntry ? 'Yes' : 'No'
                 });
             });
             
@@ -4157,7 +4009,8 @@
                     'Lot Number': item.lotNumber || 'N/A',
                     'Days in Stock': item.daysInStock,
                     'Quantity (Dozens)': item.totalDozens,
-                    'Value (₹)': calculateExpectedAmount(item)
+                    'Value (₹)': calculateExpectedAmount(item),
+                    'Manual Entry': item.isManualEntry ? 'Yes' : 'No'
                 });
             });
             
@@ -4170,7 +4023,8 @@
                     'Lot Number': item.lotNumber || 'N/A',
                     'Days in Stock': item.daysInStock,
                     'Quantity (Dozens)': item.totalDozens,
-                    'Value (₹)': calculateExpectedAmount(item)
+                    'Value (₹)': calculateExpectedAmount(item),
+                    'Manual Entry': item.isManualEntry ? 'Yes' : 'No'
                 });
             });
             
