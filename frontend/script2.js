@@ -1,3 +1,656 @@
+// ================= ENHANCED COLOR SELECTOR =================
+let selectedColors = [];
+let editSelectedColors = [];
+let differentSizesSelectedColors = []; // ✅ YE NAYA VARIABLE ADD KAREN
+let colorData = [];
+
+// Load colors from JSON
+async function loadColors() {
+    try {
+        const response = await fetch('colors.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // ✅ BETTER VALIDATION
+        if (!data.colors || !Array.isArray(data.colors)) {
+            throw new Error('Invalid color data format');
+        }
+        
+        colorData = data;
+        console.log('Loaded colors:', colorData.colors.length); // Debug log
+        
+        populateColorDropdowns();
+        generateColorCSS();
+        
+    } catch (error) {
+        console.error('Could not load colors:', error);
+        // Fallback to default colors
+        colorData = {
+            colors: [
+                { name: "RED", displayName: "Red", backgroundColor: "#ffebee", textColor: "#f44336", borderColor: "#f44336" },
+                { name: "BLUE", displayName: "Blue", backgroundColor: "#e3f2fd", textColor: "#2196f3", borderColor: "#2196f3" },
+                { name: "GREEN", displayName: "Green", backgroundColor: "#e8f5e9", textColor: "#4caf50", borderColor: "#4caf50" },
+                { name: "BLACK", displayName: "Black", backgroundColor: "#212121", textColor: "#ffffff", borderColor: "#212121" },
+                { name: "WHITE", displayName: "White", backgroundColor: "#ffffff", textColor: "#000000", borderColor: "#cccccc" },
+                { name: "PINK", displayName: "Pink", backgroundColor: "#fce4ec", textColor: "#e91e63", borderColor: "#e91e63" },
+                { name: "PURPLE", displayName: "Purple", backgroundColor: "#f3e5f5", textColor: "#9c27b0", borderColor: "#9c27b0" },
+                { name: "ORANGE", displayName: "Orange", backgroundColor: "#fff3e0", textColor: "#ff9800", borderColor: "#ff9800" }
+            ]
+        };
+        populateColorDropdowns();
+        generateColorCSS();
+        showNotification('Using default colors - color.json not found', 'warning');
+    }
+}
+
+// Initialize color selectors 
+function initColorSelectors() {
+    initColorSelector('colorSelector', 'colorDropdown', 'colorDropdownToggle', 'colorSearch', 'colorOptions', selectedColors, 'selectedColors');
+    initColorSelector('editColorSelector', 'editColorDropdown', 'editColorDropdownToggle', 'editColorSearch', 'editColorOptions', editSelectedColors, 'editSelectedColors');
+    initDifferentSizesColorSelector(); // ✅ YE NAYA LINE ADD KAREN
+}
+
+function initColorSelector(selectorId, dropdownId, toggleId, searchId, optionsId, colorsArray, selectedContainerId) {
+    const colorSelector = document.getElementById(selectorId);
+    const colorDropdown = document.getElementById(dropdownId);
+    const colorDropdownToggle = document.getElementById(toggleId);
+    const colorSearch = document.getElementById(searchId);
+    
+    if (!colorSelector || !colorDropdown) {
+        console.log('Color selector elements not found:', selectorId, dropdownId);
+        return;
+    }
+    
+    // Toggle dropdown
+    colorDropdownToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        colorDropdown.classList.toggle('active');
+        colorSelector.classList.toggle('active');
+        
+        if (colorDropdown.classList.contains('active')) {
+            colorSearch.focus();
+        }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!colorSelector.contains(e.target) && !colorDropdown.contains(e.target)) {
+            colorDropdown.classList.remove('active');
+            colorSelector.classList.remove('active');
+        }
+    });
+    
+    // Search functionality
+    colorSearch.addEventListener('input', function(e) {
+        filterColorOptions(e.target.value, optionsId);
+    });
+}
+
+// Populate color dropdowns
+function populateColorDropdowns() {
+    loadColorOptions('colorOptions');
+    loadColorOptions('editColorOptions');
+    loadDifferentSizesColorOptions(); // ✅ YE NAYA LINE ADD KAREN
+}
+
+function loadColorOptions(containerId) {
+    const colorOptions = document.getElementById(containerId);
+    if (!colorOptions || !colorData.colors) {
+        console.log('Color options container not found or no color data');
+        return;
+    }
+    
+    colorOptions.innerHTML = '';
+    
+    colorData.colors.forEach(color => {
+        const colorOption = document.createElement('div');
+        colorOption.className = 'color-option';
+        colorOption.setAttribute('data-color', color.name);
+        
+        colorOption.innerHTML = `
+            <div class="color-preview" style="background-color: ${color.backgroundColor}; border-color: ${color.borderColor}"></div>
+            <span class="color-name" style="color: ${color.textColor}">${color.displayName}</span>
+            <div class="color-checkbox"></div>
+        `;
+        
+        colorOption.addEventListener('click', function() {
+            const isEdit = containerId === 'editColorOptions';
+            toggleColorSelection(color.name, isEdit);
+        });
+        
+        colorOptions.appendChild(colorOption);
+    });
+}
+
+// Toggle color selection
+function toggleColorSelection(colorName, isEdit = false) {
+    const colorsArray = isEdit ? editSelectedColors : selectedColors;
+    const colorIndex = colorsArray.indexOf(colorName);
+    
+    if (colorIndex === -1) {
+        // Add color
+        colorsArray.push(colorName);
+    } else {
+        // Remove color
+        colorsArray.splice(colorIndex, 1);
+    }
+    
+    updateSelectedColorsDisplay(isEdit);
+    updateColorOptionsDisplay(isEdit);
+    updateHiddenInput(isEdit);
+}
+
+// Update selected colors display
+function updateSelectedColorsDisplay(isEdit = false) {
+    const colorsArray = isEdit ? editSelectedColors : selectedColors;
+    const selectedColorsContainer = document.getElementById(isEdit ? 'editSelectedColors' : 'selectedColors');
+    const noColorsElement = selectedColorsContainer.querySelector('.no-colors');
+    
+    if (!selectedColorsContainer) return;
+    
+    // Remove existing color tags
+    const existingTags = selectedColorsContainer.querySelectorAll('.selected-color-tag');
+    existingTags.forEach(tag => tag.remove());
+    
+    if (colorsArray.length === 0) {
+        if (!noColorsElement) {
+            selectedColorsContainer.innerHTML = '<span class="no-colors">No colors selected</span>';
+        }
+        return;
+    }
+    
+    // Remove "no colors" message
+    if (noColorsElement) {
+        noColorsElement.remove();
+    }
+    
+    // Add selected color tags
+    colorsArray.forEach(colorName => {
+        const color = getColorStyle(colorName);
+        if (!color) return;
+        
+        const colorTag = document.createElement('span');
+        colorTag.className = 'selected-color-tag';
+        colorTag.style.backgroundColor = color.backgroundColor;
+        colorTag.style.color = color.textColor;
+        colorTag.style.borderColor = color.borderColor;
+        
+        colorTag.innerHTML = `
+            ${color.displayName}
+            <button type="button" class="remove-color" onclick="removeColor('${colorName}', ${isEdit})">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        selectedColorsContainer.appendChild(colorTag);
+    });
+}
+
+// Remove individual color
+function removeColor(colorName, isEdit = false) {
+    event.stopPropagation();
+    const colorsArray = isEdit ? editSelectedColors : selectedColors;
+    const colorIndex = colorsArray.indexOf(colorName);
+    if (colorIndex !== -1) {
+        colorsArray.splice(colorIndex, 1);
+        updateSelectedColorsDisplay(isEdit);
+        updateColorOptionsDisplay(isEdit);
+        updateHiddenInput(isEdit);
+    }
+}
+
+// Update color options display (checkmarks)
+function updateColorOptionsDisplay(isEdit = false) {
+    const colorsArray = isEdit ? editSelectedColors : selectedColors;
+    const colorOptions = document.querySelectorAll(isEdit ? '#editColorOptions .color-option' : '#colorOptions .color-option');
+    
+    colorOptions.forEach(option => {
+        const colorName = option.getAttribute('data-color');
+        if (colorsArray.includes(colorName)) {
+            option.classList.add('selected');
+        } else {
+            option.classList.remove('selected');
+        }
+    });
+}
+
+// Update hidden input with selected colors
+function updateHiddenInput(isEdit = false) {
+    const colorsArray = isEdit ? editSelectedColors : selectedColors;
+    const colorsHidden = document.getElementById(isEdit ? 'editColorsHidden' : 'colorsHidden');
+    if (colorsHidden) {
+        colorsHidden.value = JSON.stringify(colorsArray);
+    }
+}
+
+// Filter color options based on search
+function filterColorOptions(searchTerm, containerId) {
+    const colorOptions = document.querySelectorAll(`#${containerId} .color-option`);
+    const searchLower = searchTerm.toLowerCase();
+    
+    colorOptions.forEach(option => {
+        const colorName = option.getAttribute('data-color');
+        const color = getColorStyle(colorName);
+        
+        if (color && (
+            color.name.toLowerCase().includes(searchLower) ||
+            color.displayName.toLowerCase().includes(searchLower)
+        )) {
+            option.style.display = 'flex';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+}
+
+// Get color style by name
+function getColorStyle(colorName) {
+    if (!colorData.colors) return null;
+    return colorData.colors.find(color => 
+        color.name.toUpperCase() === colorName.toUpperCase()
+    );
+}
+
+// Select all colors
+function selectAllColors() {
+    if (!colorData.colors) return;
+    
+    selectedColors = colorData.colors.map(color => color.name);
+    updateSelectedColorsDisplay(false);
+    updateColorOptionsDisplay(false);
+    updateHiddenInput(false);
+}
+
+function selectAllEditColors() {
+    if (!colorData.colors) return;
+    
+    editSelectedColors = colorData.colors.map(color => color.name);
+    updateSelectedColorsDisplay(true);
+    updateColorOptionsDisplay(true);
+    updateHiddenInput(true);
+}
+
+// Clear all colors
+function clearAllColors() {
+    selectedColors = [];
+    updateSelectedColorsDisplay(false);
+    updateColorOptionsDisplay(false);
+    updateHiddenInput(false);
+}
+
+function clearAllEditColors() {
+    editSelectedColors = [];
+    updateSelectedColorsDisplay(true);
+    updateColorOptionsDisplay(true);
+    updateHiddenInput(true);
+}
+
+// Get selected colors for form submission
+function getSelectedColors() {
+    return [...selectedColors];
+}
+
+// Load selected colors for edit modal
+function loadSelectedColorsForEdit(colorsArray) {
+    if (Array.isArray(colorsArray)) {
+        // Handle both string array and object array
+        editSelectedColors = colorsArray.map(color => 
+            typeof color === 'string' ? color : color.name
+        );
+    } else {
+        editSelectedColors = [];
+    }
+    updateSelectedColorsDisplay(true);
+    updateColorOptionsDisplay(true);
+    updateHiddenInput(true);
+}
+
+// Reset color selector
+function resetColorSelector() {
+    selectedColors = [];
+    updateSelectedColorsDisplay(false);
+    updateColorOptionsDisplay(false);
+    updateHiddenInput(false);
+    
+    const colorSearch = document.getElementById('colorSearch');
+    if (colorSearch) {
+        colorSearch.value = '';
+    }
+    filterColorOptions('', 'colorOptions');
+}
+
+// Generate dynamic CSS for colors
+function generateColorCSS() {
+    if (!colorData.colors) return;
+    
+    let css = '';
+    colorData.colors.forEach(color => {
+        css += `
+            .color-${color.name.toLowerCase()} {
+                background-color: ${color.backgroundColor} !important;
+                color: ${color.textColor} !important;
+                border: 1px solid ${color.borderColor} !important;
+            }
+        `;
+    });
+    
+    // Add to style tag
+    let styleTag = document.getElementById('dynamic-colors');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'dynamic-colors';
+        document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = css;
+}
+
+// ================= DIFFERENT SIZES COLOR MANAGEMENT =================
+
+// Initialize different sizes color selector
+function initDifferentSizesColorSelector() {
+    const colorSelector = document.getElementById('differentSizesColorSelector');
+    const colorDropdown = document.getElementById('differentSizesColorDropdown');
+    const colorDropdownToggle = document.getElementById('differentSizesColorDropdownToggle');
+    const colorSearch = document.getElementById('differentSizesColorSearch');
+    
+    if (!colorSelector || !colorDropdown) {
+        console.log('Different sizes color selector elements not found');
+        return;
+    }
+    
+    // Toggle dropdown
+    colorDropdownToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        colorDropdown.classList.toggle('active');
+        colorSelector.classList.toggle('active');
+        
+        if (colorDropdown.classList.contains('active')) {
+            colorSearch.focus();
+        }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!colorSelector.contains(e.target) && !colorDropdown.contains(e.target)) {
+            colorDropdown.classList.remove('active');
+            colorSelector.classList.remove('active');
+        }
+    });
+    
+    // Search functionality
+    colorSearch.addEventListener('input', function(e) {
+        filterDifferentSizesColorOptions(e.target.value);
+    });
+}
+
+// Populate different sizes color options
+function loadDifferentSizesColorOptions() {
+    const colorOptions = document.getElementById('differentSizesColorOptions');
+    if (!colorOptions || !colorData.colors) {
+        console.log('Different sizes color options container not found or no color data');
+        return;
+    }
+    
+    colorOptions.innerHTML = '';
+    
+    colorData.colors.forEach(color => {
+        const colorOption = document.createElement('div');
+        colorOption.className = 'color-option';
+        colorOption.setAttribute('data-color', color.name);
+        
+        colorOption.innerHTML = `
+            <div class="color-preview" style="background-color: ${color.backgroundColor}; border-color: ${color.borderColor}"></div>
+            <span class="color-name" style="color: ${color.textColor}">${color.displayName}</span>
+            <div class="color-checkbox"></div>
+        `;
+        
+        colorOption.addEventListener('click', function() {
+            toggleDifferentSizesColorSelection(color.name);
+        });
+        
+        colorOptions.appendChild(colorOption);
+    });
+}
+
+// Toggle color selection for different sizes
+function toggleDifferentSizesColorSelection(colorName) {
+    const colorIndex = differentSizesSelectedColors.indexOf(colorName);
+    
+    if (colorIndex === -1) {
+        // Add color
+        differentSizesSelectedColors.push(colorName);
+    } else {
+        // Remove color
+        differentSizesSelectedColors.splice(colorIndex, 1);
+    }
+    
+    updateDifferentSizesSelectedColorsDisplay();
+    updateDifferentSizesColorOptionsDisplay();
+    updateDifferentSizesHiddenInput();
+}
+
+// Update selected colors display for different sizes
+function updateDifferentSizesSelectedColorsDisplay() {
+    const selectedColorsContainer = document.getElementById('differentSizesSelectedColors');
+    const noColorsElement = selectedColorsContainer.querySelector('.no-colors');
+    
+    if (!selectedColorsContainer) return;
+    
+    // Remove existing color tags
+    const existingTags = selectedColorsContainer.querySelectorAll('.selected-color-tag');
+    existingTags.forEach(tag => tag.remove());
+    
+    if (differentSizesSelectedColors.length === 0) {
+        if (!noColorsElement) {
+            selectedColorsContainer.innerHTML = '<span class="no-colors">No colors selected</span>';
+        }
+        return;
+    }
+    
+    // Remove "no colors" message
+    if (noColorsElement) {
+        noColorsElement.remove();
+    }
+    
+    // Add selected color tags
+    differentSizesSelectedColors.forEach(colorName => {
+        const color = getColorStyle(colorName);
+        if (!color) return;
+        
+        const colorTag = document.createElement('span');
+        colorTag.className = 'selected-color-tag';
+        colorTag.style.backgroundColor = color.backgroundColor;
+        colorTag.style.color = color.textColor;
+        colorTag.style.borderColor = color.borderColor;
+        
+        colorTag.innerHTML = `
+            ${color.displayName}
+            <button type="button" class="remove-color" onclick="removeDifferentSizesColor('${colorName}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        selectedColorsContainer.appendChild(colorTag);
+    });
+}
+
+// Remove individual color from different sizes
+function removeDifferentSizesColor(colorName) {
+    event.stopPropagation();
+    const colorIndex = differentSizesSelectedColors.indexOf(colorName);
+    if (colorIndex !== -1) {
+        differentSizesSelectedColors.splice(colorIndex, 1);
+        updateDifferentSizesSelectedColorsDisplay();
+        updateDifferentSizesColorOptionsDisplay();
+        updateDifferentSizesHiddenInput();
+        
+        // Also remove the corresponding size inputs
+        removeColorSizeItemByColorName(colorName);
+    }
+}
+
+// Update color options display for different sizes
+function updateDifferentSizesColorOptionsDisplay() {
+    const colorOptions = document.querySelectorAll('#differentSizesColorOptions .color-option');
+    
+    colorOptions.forEach(option => {
+        const colorName = option.getAttribute('data-color');
+        if (differentSizesSelectedColors.includes(colorName)) {
+            option.classList.add('selected');
+        } else {
+            option.classList.remove('selected');
+        }
+    });
+}
+
+// Update hidden input for different sizes
+function updateDifferentSizesHiddenInput() {
+    const colorsHidden = document.getElementById('differentSizesColorsHidden');
+    if (colorsHidden) {
+        colorsHidden.value = JSON.stringify(differentSizesSelectedColors);
+    }
+}
+
+// Filter color options for different sizes
+function filterDifferentSizesColorOptions(searchTerm) {
+    const colorOptions = document.querySelectorAll('#differentSizesColorOptions .color-option');
+    const searchLower = searchTerm.toLowerCase();
+    
+    colorOptions.forEach(option => {
+        const colorName = option.getAttribute('data-color');
+        const color = getColorStyle(colorName);
+        
+        if (color && (
+            color.name.toLowerCase().includes(searchLower) ||
+            color.displayName.toLowerCase().includes(searchLower)
+        )) {
+            option.style.display = 'flex';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+}
+
+// Select all colors for different sizes
+function selectAllDifferentSizesColors() {
+    if (!colorData.colors) return;
+    
+    differentSizesSelectedColors = colorData.colors.map(color => color.name);
+    updateDifferentSizesSelectedColorsDisplay();
+    updateDifferentSizesColorOptionsDisplay();
+    updateDifferentSizesHiddenInput();
+}
+
+// Clear all colors for different sizes
+function clearAllDifferentSizesColors() {
+    differentSizesSelectedColors = [];
+    updateDifferentSizesSelectedColorsDisplay();
+    updateDifferentSizesColorOptionsDisplay();
+    updateDifferentSizesHiddenInput();
+    
+    // Clear all size inputs
+    const colorSizeItems = document.getElementById('colorSizeItems');
+    if (colorSizeItems) {
+        colorSizeItems.innerHTML = '';
+    }
+}
+
+// Generate size inputs for selected colors
+function generateColorSizeItems() {
+    if (differentSizesSelectedColors.length === 0) {
+        showNotification('Please select at least one color first', 'error');
+        return;
+    }
+    
+    const colorSizeItems = document.getElementById('colorSizeItems');
+    if (!colorSizeItems) return;
+    
+    // Clear existing items
+    colorSizeItems.innerHTML = '';
+    
+    // Create size inputs for each selected color
+    differentSizesSelectedColors.forEach((colorName, index) => {
+        const color = getColorStyle(colorName);
+        if (!color) return;
+        
+        const colorSizeItem = document.createElement('div');
+        colorSizeItem.className = 'color-size-item';
+        colorSizeItem.setAttribute('data-color', colorName);
+        
+        colorSizeItem.innerHTML = `
+            <div class="color-size-header" style="background-color: ${color.backgroundColor}; color: ${color.textColor}; border-color: ${color.borderColor}">
+                <h4>
+                    <i class="fas fa-palette"></i> 
+                    ${color.displayName}
+                </h4>
+                <button type="button" class="remove-color-btn" onclick="removeColorSizeItemByElement(this)">
+                    Remove
+                </button>
+            </div>
+            <div class="size-grid">
+                ${[28, 30, 32, 34, 36, 38, 40, 42, 44, 46].map(size => `
+                    <div class="size-input-group">
+                        <label>Size ${size}</label>
+                        <input type="number" class="color-size-${size}" data-color="${colorName}" min="0" step="1" placeholder="Dozens" value="0">
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        colorSizeItems.appendChild(colorSizeItem);
+    });
+    
+    showNotification(`Generated size inputs for ${differentSizesSelectedColors.length} colors`, 'success');
+}
+
+// Remove color size item by element
+function removeColorSizeItemByElement(button) {
+    const colorSizeItem = button.closest('.color-size-item');
+    if (!colorSizeItem) return;
+    
+    const colorName = colorSizeItem.getAttribute('data-color');
+    colorSizeItem.remove();
+    
+    // Remove from selected colors
+    const colorIndex = differentSizesSelectedColors.indexOf(colorName);
+    if (colorIndex !== -1) {
+        differentSizesSelectedColors.splice(colorIndex, 1);
+        updateDifferentSizesSelectedColorsDisplay();
+        updateDifferentSizesColorOptionsDisplay();
+        updateDifferentSizesHiddenInput();
+    }
+}
+
+// Remove color size item by color name
+function removeColorSizeItemByColorName(colorName) {
+    const colorSizeItem = document.querySelector(`.color-size-item[data-color="${colorName}"]`);
+    if (colorSizeItem) {
+        colorSizeItem.remove();
+    }
+}
+
+// Reset different sizes color selector
+function resetDifferentSizesColorSelector() {
+    differentSizesSelectedColors = [];
+    updateDifferentSizesSelectedColorsDisplay();
+    updateDifferentSizesColorOptionsDisplay();
+    updateDifferentSizesHiddenInput();
+    
+    const colorSearch = document.getElementById('differentSizesColorSearch');
+    if (colorSearch) {
+        colorSearch.value = '';
+    }
+    filterDifferentSizesColorOptions('');
+    
+    // Clear size inputs
+    const colorSizeItems = document.getElementById('colorSizeItems');
+    if (colorSizeItems) {
+        colorSizeItems.innerHTML = '';
+    }
+}
+
 // ================= ENHANCED SEARCH VARIABLES =================
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
 let searchAnalytics = JSON.parse(localStorage.getItem('searchAnalytics')) || {};
@@ -89,20 +742,25 @@ function addItemInChronologicalOrder(newItem) {
 }
 
 // ================= VALIDATION FUNCTIONS =================
+
 function validateInventoryItem(item) {
     if (!item || typeof item !== 'object') {
         console.error('Invalid item: not an object');
         return false;
     }
     
-    const requiredFields = ['productType', 'quality', 'code'];
-    if (!requiredFields.every(field => field in item)) {
-        console.error('Invalid item: missing required fields');
-        return false;
+    // Required fields check
+    const requiredFields = ['productType', 'quality', 'code', 'sizeOption', 'colors'];
+    for (let field of requiredFields) {
+        if (!(field in item)) {
+            console.error('Invalid item: missing required field:', field);
+            return false;
+        }
     }
     
-    if (typeof item.productType !== 'string') {
-        console.error('Invalid item: productType should be string');
+    // Data type validation
+    if (typeof item.productType !== 'string' || item.productType.trim() === '') {
+        console.error('Invalid item: productType should be non-empty string');
         return false;
     }
     
@@ -111,28 +769,71 @@ function validateInventoryItem(item) {
         return false;
     }
     
-    if (typeof item.quality !== 'string') {
-        console.error('Invalid item: quality should be string');
+    if (typeof item.quality !== 'string' || item.quality.trim() === '') {
+        console.error('Invalid item: quality should be non-empty string');
         return false;
     }
     
-    if (item.material && (typeof item.material !== 'number' || item.material < 0)) {
+    if (typeof item.sizeOption !== 'string' || !['same', 'different'].includes(item.sizeOption)) {
+        console.error('Invalid item: sizeOption should be "same" or "different"');
+        return false;
+    }
+    
+    // Colors validation
+    if (!Array.isArray(item.colors)) {
+        console.error('Invalid item: colors should be array');
+        return false;
+    }
+    
+    if (item.colors.length === 0) {
+        console.error('Invalid item: at least one color required');
+        return false;
+    }
+    
+    // Different sizes specific validation
+    if (item.sizeOption === 'different') {
+        const hasInvalidColors = item.colors.some(color => {
+            if (typeof color !== 'object' || color === null) {
+                console.error('Invalid color: should be object for different sizes');
+                return true;
+            }
+            
+            if (!color.name || typeof color.name !== 'string' || color.name.trim() === '') {
+                console.error('Invalid color: name should be non-empty string');
+                return true;
+            }
+            
+            if (!color.sizes || typeof color.sizes !== 'object') {
+                console.error('Invalid color: sizes should be object');
+                return true;
+            }
+            
+            return false;
+        });
+        
+        if (hasInvalidColors) {
+            return false;
+        }
+    }
+    
+    // Numeric field validation
+    if (item.material !== undefined && (typeof item.material !== 'number' || item.material < 0)) {
         console.error('Invalid item: material should be positive number');
         return false;
     }
     
-    if (item.weight && (typeof item.weight !== 'number' || item.weight < 0)) {
+    if (item.weight !== undefined && (typeof item.weight !== 'number' || item.weight < 0)) {
         console.error('Invalid item: weight should be positive number');
         return false;
     }
     
-    if (item.price && (typeof item.price !== 'number' || item.price < 0)) {
+    if (item.price !== undefined && (typeof item.price !== 'number' || item.price < 0)) {
         console.error('Invalid item: price should be positive number');
         return false;
     }
     
-    if (item.colors && !Array.isArray(item.colors)) {
-        console.error('Invalid item: colors should be array');
+    if (item.totalDozens !== undefined && (typeof item.totalDozens !== 'number' || item.totalDozens < 0)) {
+        console.error('Invalid item: totalDozens should be positive number');
         return false;
     }
     
@@ -389,30 +1090,61 @@ function addEditColorSizeItem() {
     const editColorSizeItems = document.getElementById('editColorSizeItems');
     if (!editColorSizeItems) return;
     
-    const colorCount = editColorSizeItems.children.length + 1;
+    // ✅ COLOR SELECTOR SE CURRENT SELECTED COLORS LEKE AAYE
+    const availableColors = [...editSelectedColors];
+    
+    if (availableColors.length === 0) {
+        showNotification('Please select colors first from color selector', 'error');
+        return;
+    }
+    
+    // ✅ CURRENTLY EXISTING COLORS CHECK KARO
+    const existingColors = [];
+    const existingItems = editColorSizeItems.getElementsByClassName('color-size-item');
+    for (let item of existingItems) {
+        const colorName = item.getAttribute('data-color');
+        if (colorName) existingColors.push(colorName);
+    }
+    
+    // ✅ AVAILABLE BUT NOT ADDED COLORS FIND KARO
+    const colorsToAdd = availableColors.filter(color => !existingColors.includes(color));
+    
+    if (colorsToAdd.length === 0) {
+        showNotification('All selected colors are already added', 'info');
+        return;
+    }
+    
+    // ✅ PEHLA AVAILABLE COLOR ADD KARO
+    const colorName = colorsToAdd[0];
+    const color = getColorStyle(colorName);
+    if (!color) return;
     
     const colorSizeItem = document.createElement('div');
     colorSizeItem.className = 'color-size-item';
+    colorSizeItem.setAttribute('data-color', colorName);
+    
     colorSizeItem.innerHTML = `
-        <div class="color-size-header">
-            <h4>Color #${colorCount}</h4>
-            <button type="button" class="remove-color-btn" onclick="removeEditColorSizeItem(this)">Remove</button>
-        </div>
-        <div class="form-group">
-            <label>Color Name</label>
-            <input type="text" class="edit-color-name" placeholder="Enter color name">
+        <div class="color-size-header" style="background-color: ${color.backgroundColor}; color: ${color.textColor}; border-color: ${color.borderColor}">
+            <h4>
+                <i class="fas fa-palette"></i> 
+                ${color.displayName}
+            </h4>
+            <button type="button" class="remove-color-btn" onclick="removeEditColorSizeItem(this)">
+                Remove
+            </button>
         </div>
         <div class="size-grid">
             ${[28, 30, 32, 34, 36, 38, 40, 42, 44, 46].map(size => `
                 <div class="size-input-group">
                     <label>Size ${size}</label>
-                    <input type="number" class="edit-color-size-${size}" min="0" step="1" placeholder="Dozens">
+                    <input type="number" class="edit-color-size-${size}" data-color="${colorName}" min="0" step="1" placeholder="Dozens" value="0">
                 </div>
             `).join('')}
         </div>
     `;
     
     editColorSizeItems.appendChild(colorSizeItem);
+    showNotification(`Added ${color.displayName} color`, 'success');
 }
 
 function removeEditColorSizeItem(button) {
@@ -450,10 +1182,18 @@ function removeEditColorSizeItem(button) {
 }
 
 // ================= INVENTORY MANAGEMENT FUNCTIONS =================
+
 function addInventoryItem(e) {
     e.preventDefault();
     
     if (!validateManualDate()) {
+        return;
+    }
+    
+    // Get selected colors based on size option
+    const sizeOption = document.querySelector('input[name="sizeOption"]:checked');
+    if (!sizeOption) {
+        showNotification('Please select a size option', 'error');
         return;
     }
     
@@ -476,67 +1216,59 @@ function addInventoryItem(e) {
         return;
     }
     
-    const sizeOption = document.querySelector('input[name="sizeOption"]:checked');
-    if (!sizeOption) {
-        showNotification('Please select a size option', 'error');
-        return;
-    }
-    
     let colors = [];
     let sizeData = {};
     let totalDozens = 0;
     
     if (sizeOption.value === 'same') {
-        const colorsInput = document.getElementById('colors');
-        if (!colorsInput) {
-            showNotification('Colors input not found', 'error');
+        // SAME SIZES - Use color selector
+        const selectedColorsFromPicker = getSelectedColors();
+        
+        if (selectedColorsFromPicker.length === 0) {
+            showNotification('Please select at least one color', 'error');
             return;
         }
         
-        colors = colorsInput.value.split(' ')
-            .map(color => cleanColorName(color))
-            .filter(color => color !== '')
-            .filter(color => {
-                if (!isValidColor(color)) {
-                    showNotification(`Invalid color: "${color}". Only letters allowed.`, 'error');
-                    return false;
-                }
-                return true;
-            });
+        colors = selectedColorsFromPicker.map(color => color.toUpperCase());
         
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         
+        // ✅ CORRECTED: PEHLE SIRF SIZE DATA COLLECT KARO (COLOR SE MULTIPLY NAHI)
         sizes.forEach(size => {
             const element = document.getElementById(`size${size}`);
             if (element) {
-                sizeData[`size${size}`] = parseInt(element.value) || 0;
-                totalDozens += parseInt(element.value) || 0;
+                const sizeValue = parseInt(element.value) || 0;
+                sizeData[`size${size}`] = sizeValue;
+                totalDozens += sizeValue; // ✅ DIRECT TOTAL MEIN ADD KARO (COLOR MULTIPLY NAHI)
             }
         });
+        
+        // ✅ TOTAL DOZENS MEIN COLORS KA MULTIPLY NAHI KARNA
+        // totalDozens = totalDozens * colors.length; // ❌ YE LINE COMPLETELY REMOVE
+        
     } else {
+        // DIFFERENT SIZES - Use different sizes color selector
         const colorSizeItems = document.getElementById('colorSizeItems');
-        if (!colorSizeItems) {
-            showNotification('Color size items container not found', 'error');
+        if (!colorSizeItems || colorSizeItems.children.length === 0) {
+            showNotification('Please generate size inputs for selected colors first', 'error');
             return;
         }
         
         const colorObjects = [];
+        let allColorsValid = true;
+        let hasAtLeastOneColor = false;
         
-        for (let i = 0; i < colorSizeItems.children.length; i++) {
-            const item = colorSizeItems.children[i];
-            const colorNameInput = item.querySelector('.color-name');
-            if (!colorNameInput) continue;
-            
-            const colorName = cleanColorName(colorNameInput.value.trim());
+        // Get all color size items
+        const colorSizeElements = colorSizeItems.getElementsByClassName('color-size-item');
+        
+        for (let i = 0; i < colorSizeElements.length; i++) {
+            const item = colorSizeElements[i];
+            const colorName = item.getAttribute('data-color');
             
             if (colorName) {
-                if (!isValidColor(colorName)) {
-                    showNotification(`Invalid color: "${colorName}". Only letters allowed.`, 'error');
-                    continue;
-                }
-                
                 const colorSizes = {};
                 let colorTotal = 0;
+                let hasSizeData = false;
                 
                 [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
                     const sizeInput = item.querySelector(`.color-size-${size}`);
@@ -544,17 +1276,34 @@ function addInventoryItem(e) {
                         const sizeValue = parseInt(sizeInput.value) || 0;
                         colorSizes[`size${size}`] = sizeValue;
                         colorTotal += sizeValue;
+                        if (sizeValue > 0) hasSizeData = true;
                     }
                 });
                 
-                colorObjects.push({
-                    name: colorName.toUpperCase(),
-                    sizes: colorSizes
-                });
-                
-                totalDozens += colorTotal;
+                if (hasSizeData) {
+                    colorObjects.push({
+                        name: colorName.toUpperCase(),
+                        sizes: colorSizes,
+                        totalDozens: colorTotal
+                    });
+                    
+                    totalDozens += colorTotal;
+                    hasAtLeastOneColor = true;
+                } else {
+                    const color = getColorStyle(colorName);
+                    const colorDisplayName = color ? color.displayName : colorName;
+                    showNotification(`Please enter sizes for color: ${colorDisplayName}`, 'error');
+                    allColorsValid = false;
+                }
             }
         }
+        
+        if (!hasAtLeastOneColor) {
+            showNotification('Please enter sizes for at least one color', 'error');
+            return;
+        }
+        
+        if (!allColorsValid) return;
         
         colors = colorObjects;
     }
@@ -590,6 +1339,9 @@ function addInventoryItem(e) {
         Object.assign(newItem, sizeData);
     }
     
+    // Debug log
+    console.log('Adding new item:', newItem);
+    
     if (!validateInventoryItem(newItem)) {
         showNotification('Invalid item data. Please check all fields.', 'error');
         return;
@@ -599,6 +1351,7 @@ function addInventoryItem(e) {
     
     afterDataModification();
     
+    // Reset form
     document.getElementById('productForm').reset();
     
     const sameSizesOption = document.querySelector('input[name="sizeOption"][value="same"]');
@@ -608,13 +1361,17 @@ function addInventoryItem(e) {
     toggleSizeOption();
     initManualDateTime();
     
+    // Reset color selectors
+    resetColorSelector();
+    resetDifferentSizesColorSelector();
+    
     const colorSizeItems = document.getElementById('colorSizeItems');
     if (colorSizeItems) {
         colorSizeItems.innerHTML = '';
     }
     
     const entryType = newItem.isManualEntry ? 'Old entry' : 'New entry';
-    showNotification(`${entryType} added successfully with date: ${new Date(dateInfo.originalDate).toLocaleDateString()}!`, 'success');
+    showNotification(`${entryType} added successfully! Total: ${totalDozens} dozens`, 'success');
 }
 
 function updateInventoryDisplay() {
@@ -649,9 +1406,6 @@ function renderItems(items) {
     inventoryCards.innerHTML = '';
     inventoryCards.appendChild(fragment);
 }
-
-
-
 
 function createInventoryCard(item, index) {
     const card = document.createElement('div');
@@ -726,10 +1480,12 @@ function createInventoryCard(item, index) {
     let totalDozensAllColors = 0;
     
     if (isSimpleColorFormat) {
+        // ✅ CORRECTED: DISPLAY TIME PE MULTIPLY KARNA HAI
+        let singleColorTotal = 0;
         sizes.forEach(size => {
-            totalDozensAllColors += item[`size${size}`] || 0;
+            singleColorTotal += item[`size${size}`] || 0;
         });
-        totalDozensAllColors = totalDozensAllColors * item.colors.length;
+        totalDozensAllColors = singleColorTotal * item.colors.length; // ✅ YAHAN MULTIPLY KARNA HAI
     } else if (hasColors) {
         item.colors.forEach(color => {
             let colorTotal = 0;
@@ -773,8 +1529,8 @@ function createInventoryCard(item, index) {
                         `).join('')}
                     </div>
                     <div class="calculation-step">
-                        <span class="step-label">TOTAL DOZENS:</span>
-                        <span class="step-value">${item.totalDozens}</span>
+                        <span class="step-label">TOTAL DOZENS (PER COLOR):</span>
+                        <span class="step-value">${sizes.reduce((sum, size) => sum + (item[`size${size}`] || 0), 0)}</span>
                     </div>
                 </div>
                 
@@ -988,12 +1744,6 @@ function createInventoryCard(item, index) {
     return card;
 }
 
-
-
-
-
- 
-
 // ================= STATISTICS FUNCTIONS =================
 function updateStats() {
     const braItems = inventoryItems.filter(item => item.productType === 'BRA');
@@ -1127,6 +1877,7 @@ function openEditModal(index) {
         codeDisplay.style.display = 'block';
     }
     
+    // Reset edit size option radios
     const editSizeOptionRadios = document.querySelectorAll('input[name="editSizeOption"]');
     editSizeOptionRadios.forEach(radio => {
         radio.replaceWith(radio.cloneNode(true));
@@ -1148,16 +1899,40 @@ function openEditModal(index) {
     document.getElementById('editPrice').value = item.price;
     document.getElementById('editNotes').value = item.notes || '';
     
+    // Load selected colors for editing - FOR BOTH SAME AND DIFFERENT SIZES
+    if (Array.isArray(item.colors)) {
+        loadSelectedColorsForEdit(item.colors);
+    }
+    
+    // Get references to size option elements
+    const sameSizesOption = document.querySelector('input[name="editSizeOption"][value="same"]');
+    const differentSizesOption = document.querySelector('input[name="editSizeOption"][value="different"]');
+    const sameSizesLabel = document.querySelector('label[for="editSameSizes"]');
+    const differentSizesLabel = document.querySelector('label[for="editDifferentSizes"]');
+    
+    // Remove any existing info message
+    const existingMessage = document.getElementById('differentSizesMessage');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
     if (item.sizeOption === 'same') {
-        const sameSizesOption = document.querySelector('input[name="editSizeOption"][value="same"]');
+        // SAME SIZES ITEM - Allow both options
         if (sameSizesOption) {
             sameSizesOption.checked = true;
+            sameSizesOption.disabled = false;
+            sameSizesOption.title = "";
+        }
+        if (differentSizesOption) {
+            differentSizesOption.disabled = false;
+            differentSizesOption.title = "";
         }
         
-        if (Array.isArray(item.colors) && item.colors.length > 0 && typeof item.colors[0] === 'string') {
-            document.getElementById('editColors').value = item.colors.join(' ');
-        }
+        // Show both labels
+        if (sameSizesLabel) sameSizesLabel.style.display = 'flex';
+        if (differentSizesLabel) differentSizesLabel.style.display = 'flex';
         
+        // Set size values
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         sizes.forEach(size => {
             const element = document.getElementById(`editSize${size}`);
@@ -1170,37 +1945,57 @@ function openEditModal(index) {
         document.getElementById('editDifferentSizesContainer').style.display = 'none';
         
     } else {
-        const differentSizesOption = document.querySelector('input[name="editSizeOption"][value="different"]');
+        // DIFFERENT SIZES ITEM - Only allow different sizes, block same sizes
         if (differentSizesOption) {
             differentSizesOption.checked = true;
+            differentSizesOption.disabled = false;
         }
         
-        if (Array.isArray(item.colors) && item.colors.length > 0 && typeof item.colors[0] === 'object') {
-            document.getElementById('editColors').value = item.colors.map(c => c.name).join(' ');
+        // Disable and hide same sizes option
+        if (sameSizesOption) {
+            sameSizesOption.checked = false;
+            sameSizesOption.disabled = true;
+            sameSizesOption.title = "Cannot convert different sizes to same sizes";
+        }
+        if (sameSizesLabel) {
+            sameSizesLabel.style.display = 'none';
         }
         
+        // Show info message
+        const sizeOptionsContainer = document.querySelector('.size-options');
+        if (sizeOptionsContainer && !document.getElementById('differentSizesMessage')) {
+            const message = document.createElement('div');
+            message.id = 'differentSizesMessage';
+            message.className = 'info-message';
+            message.innerHTML = '<i class="fas fa-info-circle"></i> This item uses different sizes per color and cannot be converted to same sizes.';
+            sizeOptionsContainer.appendChild(message);
+        }
+        
+        // Populate different sizes container
         const editColorSizeItems = document.getElementById('editColorSizeItems');
         if (editColorSizeItems) {
             editColorSizeItems.innerHTML = '';
             
-            if (Array.isArray(item.colors) && item.colors.length > 0) {
+            if (Array.isArray(item.colors) && item.colors.length > 0 && typeof item.colors[0] === 'object') {
                 item.colors.forEach((colorObj, colorIndex) => {
+                    const color = getColorStyle(colorObj.name);
                     const colorSizeItem = document.createElement('div');
                     colorSizeItem.className = 'color-size-item';
+                    colorSizeItem.setAttribute('data-color', colorObj.name);
+                    
                     colorSizeItem.innerHTML = `
-                        <div class="color-size-header">
-                            <h4>Color #${colorIndex + 1}</h4>
+                        <div class="color-size-header" style="background-color: ${color ? color.backgroundColor : '#f0f0f0'}; color: ${color ? color.textColor : '#333'}; border-color: ${color ? color.borderColor : '#ccc'}">
+                            <h4>
+                                <i class="fas fa-palette"></i> 
+                                ${colorObj.name}
+                            </h4>
                             <button type="button" class="remove-color-btn" onclick="removeEditColorSizeItem(this)">Remove</button>
-                        </div>
-                        <div class="form-group">
-                            <label>Color Name</label>
-                            <input type="text" class="edit-color-name" value="${colorObj.name || ''}" placeholder="Enter color name">
                         </div>
                         <div class="size-grid">
                             ${[28, 30, 32, 34, 36, 38, 40, 42, 44, 46].map(size => `
                                 <div class="size-input-group">
                                     <label>Size ${size}</label>
-                                    <input type="number" class="edit-color-size-${size}" value="${colorObj.sizes[`size${size}`] || 0}" min="0" step="1" placeholder="Dozens">
+                                    <input type="number" class="edit-color-size-${size}" data-color="${colorObj.name}" value="${colorObj.sizes[`size${size}`] || 0}" min="0" step="1" placeholder="Dozens">
                                 </div>
                             `).join('')}
                         </div>
@@ -1214,13 +2009,29 @@ function openEditModal(index) {
         document.getElementById('editDifferentSizesContainer').style.display = 'block';
     }
     
+    // Re-attach event listeners with restricted conversion logic
     const newEditSizeOptionRadios = document.querySelectorAll('input[name="editSizeOption"]');
     newEditSizeOptionRadios.forEach(radio => {
         radio.addEventListener('change', function() {
+            // Allow same → different conversion
             if (this.value === 'different' && item.sizeOption === 'same') {
                 convertSameToDifferentSizes(item);
+                toggleEditSizeOption();
             }
-            toggleEditSizeOption();
+            // Block different → same conversion
+            else if (this.value === 'same' && item.sizeOption === 'different') {
+                showNotification('Cannot convert different sizes to same sizes. Please keep as different sizes.', 'error');
+                
+                // Revert to different sizes option
+                const differentSizesOption = document.querySelector('input[name="editSizeOption"][value="different"]');
+                if (differentSizesOption) {
+                    differentSizesOption.checked = true;
+                }
+                return;
+            }
+            else {
+                toggleEditSizeOption();
+            }
         });
     });
     
@@ -1229,6 +2040,7 @@ function openEditModal(index) {
     editModal.style.display = 'flex';
 }
 
+// Conversion function for same → different
 function convertSameToDifferentSizes(item) {
     const editColorSizeItems = document.getElementById('editColorSizeItems');
     if (!editColorSizeItems) return;
@@ -1237,8 +2049,12 @@ function convertSameToDifferentSizes(item) {
     
     if (Array.isArray(item.colors) && item.colors.length > 0) {
         item.colors.forEach((colorName, colorIndex) => {
+            const color = getColorStyle(colorName);
+            if (!color) return;
+            
             const colorSizeItem = document.createElement('div');
             colorSizeItem.className = 'color-size-item';
+            colorSizeItem.setAttribute('data-color', colorName);
             
             let sizeInputsHTML = '';
             const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
@@ -1248,19 +2064,18 @@ function convertSameToDifferentSizes(item) {
                 sizeInputsHTML += `
                     <div class="size-input-group">
                         <label>Size ${size}</label>
-                        <input type="number" class="edit-color-size-${size}" value="${sizeValue}" min="0" step="1" placeholder="Dozens">
+                        <input type="number" class="edit-color-size-${size}" data-color="${colorName}" value="${sizeValue}" min="0" step="1" placeholder="Dozens">
                     </div>
                 `;
             });
             
             colorSizeItem.innerHTML = `
-                <div class="color-size-header">
-                    <h4>Color #${colorIndex + 1}</h4>
+                <div class="color-size-header" style="background-color: ${color.backgroundColor}; color: ${color.textColor}; border-color: ${color.borderColor}">
+                    <h4>
+                        <i class="fas fa-palette"></i> 
+                        ${color.displayName}
+                    </h4>
                     <button type="button" class="remove-color-btn" onclick="removeEditColorSizeItem(this)">Remove</button>
-                </div>
-                <div class="form-group">
-                    <label>Color Name</label>
-                    <input type="text" class="edit-color-name" value="${typeof colorName === 'string' ? colorName : colorName.name}" placeholder="Enter color name">
                 </div>
                 <div class="size-grid">
                     ${sizeInputsHTML}
@@ -1271,8 +2086,16 @@ function convertSameToDifferentSizes(item) {
         });
     }
     
+    // ✅ EDIT SELECTED COLORS KO BHI UPDATE KARO
+    editSelectedColors = [...item.colors];
+    updateSelectedColorsDisplay(true);
+    updateColorOptionsDisplay(true);
+    updateHiddenInput(true);
+    
     document.getElementById('editSameSizesContainer').style.display = 'none';
     document.getElementById('editDifferentSizesContainer').style.display = 'block';
+    
+    showNotification('Converted to different sizes. Size values copied to all colors.', 'success');
 }
 
 function closeEditModal() {
@@ -1286,12 +2109,23 @@ function updateItem(e) {
     e.preventDefault();
     
     const index = document.getElementById('editIndex').value;
-    const item = inventoryItems[index];
+    if (!index) {
+        showNotification('Invalid item index', 'error');
+        return;
+    }
     
+    const item = inventoryItems[index];
+    if (!item) {
+        showNotification('Item not found', 'error');
+        return;
+    }
+    
+    // Preserve original dates
     const originalDateTime = item.dateTime;
     const originalAddedDateTime = item.addedDateTime;
     const originalIsManual = item.isManualEntry;
     
+    // Get form values
     const productType = document.getElementById('editProductType').value;
     const cupSize = document.getElementById('editCupSize').value;
     const lotNumber = document.getElementById('editLotNumber').value;
@@ -1301,6 +2135,7 @@ function updateItem(e) {
     const price = parseFloat(document.getElementById('editPrice').value) || 0;
     const notes = document.getElementById('editNotes').value;
     
+    // Validation
     if (!productType) {
         showNotification('Product Type is required', 'error');
         return;
@@ -1322,81 +2157,93 @@ function updateItem(e) {
     let totalDozens = 0;
     
     if (sizeOption.value === 'same') {
-        const colorsInput = document.getElementById('editColors');
-        if (!colorsInput) {
-            showNotification('Colors input not found', 'error');
+        // SAME SIZES - Use edit color selector
+        if (editSelectedColors.length === 0) {
+            showNotification('Please select at least one color', 'error');
             return;
         }
         
-        colors = colorsInput.value.split(' ')
-            .map(color => cleanColorName(color))
-            .filter(color => color !== '')
-            .filter(color => {
-                if (!isValidColor(color)) {
-                    showNotification(`Invalid color: "${color}". Only letters allowed.`, 'error');
-                    return false;
-                }
-                return true;
-            });
+        colors = editSelectedColors.map(color => color.toUpperCase());
         
+        // Get size values
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         
+        // ✅ CORRECTED: COLOR SE MULTIPLY NAHI KARNA
         sizes.forEach(size => {
             const element = document.getElementById(`editSize${size}`);
             if (element) {
-                sizeData[`size${size}`] = parseInt(element.value) || 0;
-                totalDozens += parseInt(element.value) || 0;
+                const sizeValue = parseInt(element.value) || 0;
+                sizeData[`size${size}`] = sizeValue;
+                totalDozens += sizeValue; // ✅ DIRECT TOTAL MEIN ADD KARO (COLOR MULTIPLY NAHI)
             }
         });
+        
     } else {
+        // DIFFERENT SIZES - Use color size items
         const editColorSizeItems = document.getElementById('editColorSizeItems');
-        if (!editColorSizeItems) {
-            showNotification('Color size items container not found', 'error');
+        if (!editColorSizeItems || editColorSizeItems.children.length === 0) {
+            showNotification('Please add at least one color with sizes', 'error');
             return;
         }
         
         const colorObjects = [];
+        let allColorsValid = true;
+        let hasAtLeastOneColor = false;
         
+        // Process each color size item
         for (let i = 0; i < editColorSizeItems.children.length; i++) {
             const colorItem = editColorSizeItems.children[i];
-            const colorNameInput = colorItem.querySelector('.edit-color-name');
-            if (!colorNameInput) continue;
-            
-            const colorName = cleanColorName(colorNameInput.value.trim());
+            const colorName = colorItem.getAttribute('data-color');
             
             if (colorName) {
-                if (!isValidColor(colorName)) {
-                    showNotification(`Invalid color: "${colorName}". Only letters allowed.`, 'error');
-                    continue;
-                }
-                
                 const colorSizes = {};
                 let colorTotal = 0;
+                let hasSizeData = false;
                 
+                // Get sizes for this color
                 [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
                     const sizeInput = colorItem.querySelector(`.edit-color-size-${size}`);
                     if (sizeInput) {
                         const sizeValue = parseInt(sizeInput.value) || 0;
                         colorSizes[`size${size}`] = sizeValue;
                         colorTotal += sizeValue;
+                        if (sizeValue > 0) hasSizeData = true;
                     }
                 });
                 
-                colorObjects.push({
-                    name: colorName.toUpperCase(),
-                    sizes: colorSizes
-                });
-                
-                totalDozens += colorTotal;
+                if (hasSizeData) {
+                    colorObjects.push({
+                        name: colorName.toUpperCase(),
+                        sizes: colorSizes,
+                        totalDozens: colorTotal
+                    });
+                    
+                    totalDozens += colorTotal;
+                    hasAtLeastOneColor = true;
+                } else {
+                    const color = getColorStyle(colorName);
+                    const colorDisplayName = color ? color.displayName : colorName;
+                    showNotification(`Please enter sizes for color: ${colorDisplayName}`, 'error');
+                    allColorsValid = false;
+                }
             }
         }
+        
+        if (!hasAtLeastOneColor) {
+            showNotification('Please enter sizes for at least one color', 'error');
+            return;
+        }
+        
+        if (!allColorsValid) return;
         
         colors = colorObjects;
     }
     
+    // Calculate totals
     const totalPieces = calculateTotalPieces(totalDozens);
     const totalAmount = calculateTotalAmount(totalDozens, price);
     
+    // Update item properties
     item.productType = productType.toUpperCase();
     item.cupSize = cupSize;
     item.lotNumber = lotNumber;
@@ -1411,29 +2258,32 @@ function updateItem(e) {
     item.totalAmount = totalAmount;
     item.sizeOption = sizeOption.value;
     
+    // Handle size data based on option
     if (sizeOption.value === 'same') {
         Object.assign(item, sizeData);
     } else {
+        // Clean up old size data when switching to different sizes
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         sizes.forEach(size => {
             delete item[`size${size}`];
         });
     }
     
-    if (!validateInventoryItem(item)) {
-        showNotification('Invalid item data. Please check all fields.', 'error');
-        return;
-    }
-    
+    // Preserve original dates
     item.dateTime = originalDateTime;
     item.addedDateTime = originalAddedDateTime;
     item.isManualEntry = originalIsManual;
     item.lastModified = getCurrentDateTime();
     
+    // Final validation
+    if (!validateInventoryItem(item)) {
+        showNotification('Invalid item data. Please check all fields.', 'error');
+        return;
+    }
+    
+    // Save and update UI
     afterDataModification();
-    
     closeEditModal();
-    
     showNotification('Product entry updated successfully!', 'success');
 }
 
@@ -1962,7 +2812,8 @@ async function initApp() {
     
     inventoryItems = loadInventoryData();
     
-    await loadQualities(); 
+    await loadQualities();
+    await loadColors(); // ADD THIS LINE
     
     if (localStorage.getItem('inventory_backup')) {
         showNotification('Some invalid items were filtered out. Check console for details.', 'warning');
@@ -1973,6 +2824,9 @@ async function initApp() {
     initMobileMenu();
     
     initManualDateTime();
+    
+    // INITIALIZE COLOR SELECTORS - ADD THIS LINE
+    initColorSelectors();
     
     const sizeOptions = document.querySelectorAll('input[name="sizeOption"]');
     if (sizeOptions.length > 0) {
@@ -2002,12 +2856,12 @@ async function initApp() {
     updateTotalInventory();
     animateCharts();
     
-    initEnhancedSearch();
-    buildSearchIndex();
+   // initEnhancedSearch();
+    //buildSearchIndex();
     
-    const oldestItem = inventoryItems.length > 0 ? 
+    const oldestItem = inventoryItems.length > 0 ?
         new Date(inventoryItems[inventoryItems.length - 1].dateTime).toLocaleDateString() : 'N/A';
-    const newestItem = inventoryItems.length > 0 ? 
+    const newestItem = inventoryItems.length > 0 ?
         new Date(inventoryItems[0].dateTime).toLocaleDateString() : 'N/A';
     
     showNotification(`Loaded ${inventoryItems.length} items (${oldestItem} to ${newestItem})`, 'success');
@@ -2052,7 +2906,7 @@ function initEnhancedSearch() {
     const searchInput = document.getElementById('searchInput');
     if (!searchInput) return;
     
-    const suggestionsList = document.createElement('ul');
+    const suggestionsList = document.createElement('ul'); // ✅ TYPO FIXED
     suggestionsList.id = 'suggestionsList';
     suggestionsList.className = 'suggestions-dropdown';
     
