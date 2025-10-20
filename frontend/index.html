@@ -248,10 +248,36 @@
                                     </div>
                                     
                                     <div class="form-group">
-                                        <label for="colors">Colors (space separated)</label>
-                                        <div class="color-input-container">
-                                            <input type="text" id="colors" placeholder="Red Blue Green">
+                                        <label for="colors">Colors</label>
+                                        <div class="color-selector-container">
+                                            <div class="color-selector" id="colorSelector">
+                                                <div class="selected-colors" id="selectedColors">
+                                                    <span class="no-colors">No colors selected</span>
+                                                </div>
+                                                <button type="button" class="color-dropdown-toggle" id="colorDropdownToggle">
+                                                    <i class="fas fa-chevron-down"></i>
+                                                </button>
+                                            </div>
+                                            
+                                            <div class="color-dropdown" id="colorDropdown">
+                                                <div class="color-search">
+                                                    <input type="text" id="colorSearch" placeholder="Search colors...">
+                                                    <i class="fas fa-search"></i>
+                                                </div>
+                                                <div class="color-options" id="colorOptions">
+                                                    <!-- Colors will be loaded dynamically -->
+                                                </div>
+                                                <div class="color-actions">
+                                                    <button type="button" class="btn-select-all" onclick="selectAllColors()">
+                                                        <i class="fas fa-check-double"></i> Select All
+                                                    </button>
+                                                    <button type="button" class="btn-clear-all" onclick="clearAllColors()">
+                                                        <i class="fas fa-times"></i> Clear All
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
+                                        <input type="hidden" id="colorsHidden" name="colors">
                                     </div>
                                 </div>
                             </div>
@@ -319,13 +345,49 @@
                                 </div>
                                 
                                 <div id="differentSizesContainer" class="color-size-container" style="display: none;">
-                                    <div id="colorSizeItems">
-                                        <!-- Color size items will be added dynamically -->
+                                        <div class="color-selector-section">
+                                            <h4>Select Colors for Different Sizes</h4>
+                                            <div class="color-selector-container">
+                                                <div class="color-selector" id="differentSizesColorSelector">
+                                                    <div class="selected-colors" id="differentSizesSelectedColors">
+                                                        <span class="no-colors">No colors selected</span>
+                                                    </div>
+                                                    <button type="button" class="color-dropdown-toggle" id="differentSizesColorDropdownToggle">
+                                                        <i class="fas fa-chevron-down"></i>
+                                                    </button>
+                                                </div>
+                                                
+                                                <div class="color-dropdown" id="differentSizesColorDropdown">
+                                                    <div class="color-search">
+                                                        <input type="text" id="differentSizesColorSearch" placeholder="Search colors...">
+                                                        <i class="fas fa-search"></i>
+                                                    </div>
+                                                    <div class="color-options" id="differentSizesColorOptions">
+                                                        <!-- Colors will be loaded dynamically -->
+                                                    </div>
+                                                    <div class="color-actions">
+                                                        <button type="button" class="btn-select-all" onclick="selectAllDifferentSizesColors()">
+                                                            <i class="fas fa-check-double"></i> Select All
+                                                        </button>
+                                                        <button type="button" class="btn-clear-all" onclick="clearAllDifferentSizesColors()">
+                                                            <i class="fas fa-times"></i> Clear All
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" id="differentSizesColorsHidden">
+                                        </div>
+                                        
+                                        <div id="colorSizeItems">
+                                            <!-- Color size items will be added dynamically based on selected colors -->
+                                        </div>
+                                        
+                                        <div class="different-sizes-actions">
+                                            <button type="button" class="btn btn-secondary" onclick="generateColorSizeItems()">
+                                                <i class="fas fa-magic"></i> Generate Size Inputs for Selected Colors
+                                            </button>
+                                        </div>
                                     </div>
-                                    <button type="button" class="add-color-btn" onclick="addColorSizeItem()">
-                                        <i class="fas fa-plus"></i> Add Color with Sizes
-                                    </button>
-                                </div>
                             </div>
 
                             <!-- Additional Information Section -->
@@ -428,12 +490,40 @@
                         <input type="number" id="editPrice" step="0.01" placeholder="Enter price per dozen">
                     </div>
                     
-                    <div class="form-group">
-                        <label for="editColors">Colors (space separated)</label>
-                        <input type="text" id="editColors" placeholder="Red Blue Green">
+                   <div class="form-group">
+                        <label for="editColors">Colors</label>
+                        <div class="color-selector-container">
+                            <div class="color-selector" id="editColorSelector">
+                                <div class="selected-colors" id="editSelectedColors">
+                                    <span class="no-colors">No colors selected</span>
+                                </div>
+                                <button type="button" class="color-dropdown-toggle" id="editColorDropdownToggle">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="color-dropdown" id="editColorDropdown">
+                                <div class="color-search">
+                                    <input type="text" id="editColorSearch" placeholder="Search colors...">
+                                    <i class="fas fa-search"></i>
+                                <div class="color-options" id="editColorOptions">
+                                    <!-- Colors will be loaded dynamically -->
+                                </div>
+                                <div class="color-actions">
+                                    <button type="button" class="btn-select-all" onclick="selectAllEditColors()">
+                                        <i class="fas fa-check-double"></i> Select All
+                                    </button>
+                                    <button type="button" class="btn-clear-all" onclick="clearAllEditColors()">
+                                        <i class="fas fa-times"></i> Clear All
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="editColorsHidden" name="editColors">
                     </div>
-                </div>
-                
+                   
+                   
+                   
                 <div class="size-option">
                     <label>
                         <input type="radio" name="editSizeOption" value="same" checked onchange="toggleEditSizeOption()">
