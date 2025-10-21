@@ -321,26 +321,40 @@ function createInventoryCard(item, index) {
     }
     
     // Calculate total dozens for display
-    const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
-    let totalDozensAllColors = 0;
+    // ✅ FIXED: Calculate total dozens for display
+const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+let totalDozensAllColors = 0;
+let sizeWiseCalculation = []; // For displaying calculation steps
+
+if (isSimpleColorFormat) {
+    // ✅ FIXED: Same format - correct calculation
+    let sizeTotalWithoutColors = 0;
     
-    if (isSimpleColorFormat) {
-        let sizeTotal = 0;
-        sizes.forEach(size => {
-            sizeTotal += Number(item[`size${size}`]) || 0;
+    sizes.forEach(size => {
+        const sizeValue = Number(item[`size${size}`]) || 0;
+        sizeTotalWithoutColors += sizeValue;
+        totalDozensAllColors += sizeValue * item.colors.length;
+        
+        // Store for display
+        sizeWiseCalculation.push({
+            size: size,
+            value: sizeValue,
+            total: sizeValue * item.colors.length
         });
-        totalDozensAllColors = sizeTotal * item.colors.length;
-    } else if (hasColors) {
-        item.colors.forEach(color => {
-            if (color && color.sizes) {
-                let colorTotal = 0;
-                sizes.forEach(size => {
-                    colorTotal += Number(color.sizes[`size${size}`]) || 0;
-                });
-                totalDozensAllColors += colorTotal;
-            }
-        });
-    }
+    });
+    
+} else if (hasColors) {
+    // Different format - already correct
+    item.colors.forEach(color => {
+        if (color && color.sizes) {
+            let colorTotal = 0;
+            sizes.forEach(size => {
+                colorTotal += Number(color.sizes[`size${size}`]) || 0;
+            });
+            totalDozensAllColors += colorTotal;
+        }
+    });
+}
     
     // Create card content based on format type
     let cardContent = '';
