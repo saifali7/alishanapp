@@ -4,9 +4,14 @@ let filteredItems = [];
 let currentPage = 1;
 let itemsPerPage = 50;
 let totalPages = 1;
+let isUserAuthenticated = false;
 
-// Initialize the page
+// Initialize the page with auth check
 async function initPage() {
+    // First check authentication
+    await checkAuthentication();
+    
+    // Then load inventory data
     loadInventoryData();
     updateDashboard();
     populateQualityFilter();
@@ -26,12 +31,113 @@ async function initPage() {
     console.log("Inventory page initialized with", inventoryItems.length, "items");
 }
 
+// ✅ NEW: Authentication Check Function
+async function checkAuthentication() {
+    try {
+        // Wait for renderStorage to initialize
+        if (!window.renderStorage) {
+            setTimeout(checkAuthentication, 100);
+            return;
+        }
+        
+        const authStatus = window.renderStorage.getSyncStatus();
+        isUserAuthenticated = authStatus.isLoggedIn || authStatus.isGuestMode;
+        
+        if (!isUserAuthenticated) {
+            // Redirect to login if not authenticated
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // Update UI with user info
+        window.renderStorage.updateUI();
+        
+        // Load data based on user type
+        await loadUserData();
+        
+    } catch (error) {
+        console.error('Auth check error:', error);
+        window.location.href = 'login.html';
+    }
+}
+
+// ✅ NEW: Load User Data Function
+async function loadUserData() {
+    try {
+        if (window.renderStorage) {
+            const data = await window.renderStorage.loadInventory();
+            inventoryItems = data;
+            filteredItems = [...data];
+            
+            console.log('📊 Loaded user data:', {
+                items: data.length,
+                isGuest: window.renderStorage.isGuestMode,
+                isOnline: window.renderStorage.isOnline
+            });
+            
+            // Show guest mode warning if applicable
+            if (window.renderStorage.isGuestMode) {
+                showGuestModeWarning();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        showNotification('Error loading data. Using local storage.', 'error');
+    }
+}
+
+// ✅ NEW: Show Guest Mode Warning
+function showGuestModeWarning() {
+    const existingWarning = document.querySelector('.guest-warning');
+    if (existingWarning) return;
+    
+    const warning = document.createElement('div');
+    warning.className = 'guest-warning';
+    warning.innerHTML = `
+        <i class="fas fa-user-clock"></i>
+        <div>
+            <strong>Guest Mode Active</strong>
+            <div style="font-size: 0.8rem; opacity: 0.9;">
+                Your data is saved locally. 
+                <a href="login.html" style="color: white; text-decoration: underline;">Login</a> 
+                to save to cloud.
+            </div>
+        </div>
+    `;
+    
+    const container = document.querySelector('.container');
+    if (container) {
+        container.insertBefore(warning, container.firstChild);
+    }
+}
+
+// ✅ UPDATE: Save Inventory Function to use Render Storage
+async function saveInventoryData() {
+    try {
+        if (window.renderStorage && isUserAuthenticated) {
+            await window.renderStorage.saveInventory(inventoryItems);
+        } else {
+            // Fallback to local storage
+            localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+            console.log('💾 Saved to local storage (fallback)');
+        }
+    } catch (error) {
+        console.error('Save error:', error);
+        localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+        showNotification('Saved locally (fallback)', 'warning');
+    }
+}
+
 // Load inventory data from localStorage
 function loadInventoryData() {
     try {
-        const inventoryData = localStorage.getItem('inventoryItems');
-        inventoryItems = inventoryData ? JSON.parse(inventoryData) : [];
-        filteredItems = [...inventoryItems];
+        // This is now handled in loadUserData()
+        // Keeping for backward compatibility
+        if (inventoryItems.length === 0) {
+            const inventoryData = localStorage.getItem('inventoryItems');
+            inventoryItems = inventoryData ? JSON.parse(inventoryData) : [];
+            filteredItems = [...inventoryItems];
+        }
     } catch (error) {
         console.error('Error loading inventory data:', error);
         showNotification('Error loading inventory data. Please check console for details.', 'error');
@@ -321,40 +427,39 @@ function createInventoryCard(item, index) {
     }
     
     // Calculate total dozens for display
-    // ✅ FIXED: Calculate total dozens for display
-const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
-let totalDozensAllColors = 0;
-let sizeWiseCalculation = []; // For displaying calculation steps
+    const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+    let totalDozensAllColors = 0;
+    let sizeWiseCalculation = []; // For displaying calculation steps
 
-if (isSimpleColorFormat) {
-    // ✅ FIXED: Same format - correct calculation
-    let sizeTotalWithoutColors = 0;
-    
-    sizes.forEach(size => {
-        const sizeValue = Number(item[`size${size}`]) || 0;
-        sizeTotalWithoutColors += sizeValue;
-        totalDozensAllColors += sizeValue * item.colors.length;
+    if (isSimpleColorFormat) {
+        // ✅ FIXED: Same format - correct calculation
+        let sizeTotalWithoutColors = 0;
         
-        // Store for display
-        sizeWiseCalculation.push({
-            size: size,
-            value: sizeValue,
-            total: sizeValue * item.colors.length
-        });
-    });
-    
-} else if (hasColors) {
-    // Different format - already correct
-    item.colors.forEach(color => {
-        if (color && color.sizes) {
-            let colorTotal = 0;
-            sizes.forEach(size => {
-                colorTotal += Number(color.sizes[`size${size}`]) || 0;
+        sizes.forEach(size => {
+            const sizeValue = Number(item[`size${size}`]) || 0;
+            sizeTotalWithoutColors += sizeValue;
+            totalDozensAllColors += sizeValue * item.colors.length;
+            
+            // Store for display
+            sizeWiseCalculation.push({
+                size: size,
+                value: sizeValue,
+                total: sizeValue * item.colors.length
             });
-            totalDozensAllColors += colorTotal;
-        }
-    });
-}
+        });
+        
+    } else if (hasColors) {
+        // Different format - already correct
+        item.colors.forEach(color => {
+            if (color && color.sizes) {
+                let colorTotal = 0;
+                sizes.forEach(size => {
+                    colorTotal += Number(color.sizes[`size${size}`]) || 0;
+                });
+                totalDozensAllColors += colorTotal;
+            }
+        });
+    }
     
     // Create card content based on format type
     let cardContent = '';
@@ -884,19 +989,10 @@ function updateItem(e) {
     
     const item = inventoryItems[index];
     
-    
-    
     // ✅ ORIGINAL VALUES PRESERVE KAREIN
-const originalDateTime = item.dateTime;
-const originalAddedDateTime = item.addedDateTime;
-const originalIsManual = item.isManualEntry;
-    
-    
-    
-    
-    
-    
-    
+    const originalDateTime = item.dateTime;
+    const originalAddedDateTime = item.addedDateTime;
+    const originalIsManual = item.isManualEntry;
     
     // Get form values
     const productType = document.getElementById('editProductType')?.value || '';
@@ -1024,22 +1120,13 @@ const originalIsManual = item.isManualEntry;
     item.totalAmount = totalAmount;
     item.sizeOption = sizeOption.value;
     
-    
-    
-    
     // ✅ ORIGINAL DATES PRESERVE KAREIN (IMPORTANT!)
-item.dateTime = originalDateTime;
-item.addedDateTime = originalAddedDateTime;
-item.isManualEntry = originalIsManual;
-
+    item.dateTime = originalDateTime;
+    item.addedDateTime = originalAddedDateTime;
+    item.isManualEntry = originalIsManual;
 
     // ✅ Last modified timestamp add karein (optional)
-item.lastModified = new Date().toISOString();
-    
-    
-    
-    
-    
+    item.lastModified = new Date().toISOString();
     
     // Add size data for simple format
     if (sizeOption.value === 'same') {
@@ -1052,11 +1139,8 @@ item.lastModified = new Date().toISOString();
         });
     }
     
-    // Update date/time
-    //item.dateTime = new Date().toISOString();
-    
-    // Save to localStorage
-    localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+    // ✅ UPDATE: Use new save function
+    saveInventoryData();
     
     // Update display
     renderInventoryCards();
@@ -1069,7 +1153,7 @@ item.lastModified = new Date().toISOString();
     showNotification('Product entry updated successfully!', 'success');
 }
 
-// Function to delete item
+// ✅ UPDATE: Delete Item Function
 function deleteItem(index) {
     if (index < 0 || index >= inventoryItems.length) {
         showNotification('Invalid item index', 'error');
@@ -1078,7 +1162,7 @@ function deleteItem(index) {
     
     if (confirm('Are you sure you want to delete this item?')) {
         inventoryItems.splice(index, 1);
-        localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+        saveInventoryData(); // ✅ CHANGED
         loadInventoryData();
         applyFilters();
         updateDashboard(); // ✅ FIXED: Dashboard update after delete
@@ -1087,7 +1171,7 @@ function deleteItem(index) {
     }
 }
 
-// Function to toggle stock status
+// ✅ UPDATE: Toggle Stock Function
 function toggleStock(index) {
     if (index < 0 || index >= inventoryItems.length) {
         showNotification('Invalid item index', 'error');
@@ -1095,7 +1179,7 @@ function toggleStock(index) {
     }
     
     inventoryItems[index].inStock = !inventoryItems[index].inStock;
-    localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+    saveInventoryData(); // ✅ CHANGED
     renderInventoryCards();
     updateDashboard(); // ✅ FIXED: Dashboard update after stock toggle
     
@@ -1378,7 +1462,7 @@ function initializeBackupSystem() {
     // Check if auto backup is enabled
     const autoBackupEnabled = localStorage.getItem('autoBackupEnabled') !== 'false';
     
-    if (autoBackupEnabled) {
+    if (autoBackupEnabled && isUserAuthenticated && window.renderStorage && !window.renderStorage.isGuestMode) {
         const frequency = parseInt(localStorage.getItem('backupFrequency') || '24');
         if (frequency > 0) {
             setInterval(createAutoBackup, frequency * 60 * 60 * 1000);
@@ -1387,7 +1471,7 @@ function initializeBackupSystem() {
     
     // Create initial backup if none exists
     const lastBackup = localStorage.getItem('lastBackupDate');
-    if (!lastBackup) {
+    if (!lastBackup && isUserAuthenticated) {
         createAutoBackup();
     }
 }
@@ -1961,5 +2045,59 @@ async function exportLargeDataInChunks(data, baseFileName) {
     showNotification(`📦 Large export completed! ${totalChunks} files generated.`, 'success');
 }
 
-// Initialize the page when loaded
-document.addEventListener('DOMContentLoaded', initPage);
+// ✅ ADD: Global helper functions for user menu
+function toggleUserMenu() {
+    const menu = document.getElementById('userMenu');
+    if (menu) {
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.user-info')) {
+        const menu = document.getElementById('userMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
+    }
+});
+
+// ✅ NEW: Sync Status Update Function
+function updateSyncStatus() {
+    if (!window.renderStorage) return;
+    
+    const status = window.renderStorage.getSyncStatus();
+    const syncElement = document.getElementById('syncStatus');
+    
+    if (!syncElement) {
+        // Create sync status element if it doesn't exist
+        const headerContent = document.querySelector('.header-content');
+        if (headerContent) {
+            const syncDiv = document.createElement('div');
+            syncDiv.id = 'syncStatus';
+            syncDiv.className = `sync-status ${status.isOnline ? 'online' : 'offline'}`;
+            syncDiv.innerHTML = `
+                <i class="fas ${status.isOnline ? 'fa-cloud' : 'fa-cloud-slash'}"></i>
+                <span>${status.isOnline ? 'Online' : 'Offline'}</span>
+            `;
+            headerContent.insertBefore(syncDiv, headerContent.querySelector('.user-profile'));
+        }
+    } else {
+        // Update existing sync status
+        syncElement.className = `sync-status ${status.isOnline ? 'online' : 'offline'}`;
+        syncElement.innerHTML = `
+            <i class="fas ${status.isOnline ? 'fa-cloud' : 'fa-cloud-slash'}"></i>
+            <span>${status.isOnline ? 'Online' : 'Offline'}</span>
+        `;
+    }
+}
+
+// ✅ UPDATE: DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the page with auth check
+    initPage();
+    
+    // Add sync status monitoring
+    setInterval(updateSyncStatus, 30000); // Update every 30 seconds
+});
