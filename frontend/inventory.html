@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <link rel="stylesheet" href="inventory.css">
+    <link rel="stylesheet" href="user-profile.css"> <!-- NEW -->
     
     <style>
         /* CSS yahan add hoga */
@@ -29,6 +30,10 @@
                     <li><a href="setting.html"><i class="fas fa-cog"></i> SETTINGS</a></li>
                 </ul>
             </nav>
+            <!-- ✅ NEW: User Profile Section -->
+        <div id="userProfile" class="user-profile" style="display: none;">
+            <!-- User profile will be dynamically inserted by JavaScript -->
+        </div>
         </div>
     </header>
 
@@ -579,18 +584,9 @@
     <!-- Notification Container -->
     <div class="notification-container" id="notificationContainer"></div>
     
-    
-    <script src="inventory.js" type="text/javascript" charset="utf-8"></script>
-    
-    
-    <!-- Google Cloud Scripts -->
-<script src="https://apis.google.com/js/api.js"></script>
-<script src="https://accounts.google.com/gsi/client"></script>
-<script src="config.js"></script>
-<script src="google-cloud-config.js"></script>
 
-    <script>
-        // JavaScript yahan add hoga
-    </script>
+    <script src="inventory.js" type="text/javascript" charset="utf-8"></script>
+        <!-- ✅ ADD THIS BEFORE CLOSING BODY TAG -->
+    <script src="render-storage.js"></script>
 </body>
 </html>
