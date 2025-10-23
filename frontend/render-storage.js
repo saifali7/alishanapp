@@ -5,7 +5,8 @@ class RenderStorage {
         this.userEmail = null;
         this.userProfile = null;
         this.isOnline = navigator.onLine;
-        this.apiBase = window.location.origin;
+        // CHANGE TO (SOLUTION):
+        this.apiBase = 'https://alishanapp-backend-l.onrender.com';
         this.isGuestMode = false;
         this.init();
     }
