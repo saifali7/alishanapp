@@ -1,32 +1,32 @@
 {
   "bra": [
-    "LAZO",
-    "NAIRA",
-    "EXOTIC",
-    "PARFECTO",
-    "ADDITION",
-    "JAXXON",
-    "CHARLIE",
-    "KANISHKA",
-    "FLORA",
-    "EAZY",
-    "NANCY",
-    "RIHANA -PAD",
-    "SISKA-PAD",
-    "MINI-MIZER",
-    "JANVI-COTTEN",
-    "YUKTA-PAD",
+    "SUZEN-MOLD",
     "AMIRI-MOLD",
-    "CIBA",
-    "MEERA-COTTON",
     "SILENT-MOLD",
     "JAIKAT-MOLD",
-    "U-SEEMLESS",
+    "U-SEEMLESS-MOLD",
+    "MINI-MIZER-MOLD",
+    "ADDITION-MOLD",
+    "JAXXON-MOLD",
+    "CHARLIE-MOLD",
+    "KANISHKA-MOLD",
+    "FLORA-MOLD",
+    "EAZY-MOLD",
+    "EXOTIC-MOLD",
+    "NAIRA-MOLD",
+    "NANCY-MOLD",
+    "CIBA-MOLD",
+    "RIHANA -PAD",
+    "SISKA-PAD",
+    "YUKTA-PAD",
     "KIRTI-FOAM",
     "DOT-FOAM",
-    "SUZEN-MOLD",
     "PALLAVI-COTTON",
-    "C-CUP COTTON"
+    "PARFECTO-COTTON",
+    "JANVI-COTTON",
+    "MEERA-COTTON",
+    "C-CUP COTTON",
+    "LAZO"
   ],
   "panty": [
     "ICE-PANTY",
@@ -43,7 +43,7 @@
     "SHINING-SET"
   ],
   "blouse": [
-    "ORRY-BLAUSE",
-    "MERRYKOM-BLAUSE"
+    "ORRY-BLOUSE",
+    "MERRYKOM-BLOUSE"
   ]
 }
