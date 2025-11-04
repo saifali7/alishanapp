@@ -13,7 +13,7 @@ async function loadColors() {
         }
         const data = await response.json();
         
-        // ✅ BETTER VALIDATION
+        // ✅ BETTERVALIDATION
         if (!data.colors || !Array.isArray(data.colors)) {
             throw new Error('Invalid color data format');
         }
@@ -769,6 +769,12 @@ function validateInventoryItem(item) {
         return false;
     }
     
+    // LOT NUMBER VALIDATION - Allow digits and hyphens
+    if (item.lotNumber && !/^[\d\-]*$/.test(item.lotNumber)) {
+        console.error('Invalid item: lotNumber should contain only digits and hyphens');
+        return false;
+    }
+    
     if (typeof item.quality !== 'string' || item.quality.trim() === '') {
         console.error('Invalid item: quality should be non-empty string');
         return false;
@@ -841,8 +847,9 @@ function validateInventoryItem(item) {
 }
 
 function loadInventoryData() {
+    let stored; // ✅ YEH NAYI LINE ADD KARO
     try {
-        const stored = localStorage.getItem('inventoryItems');
+         stored = localStorage.getItem('inventoryItems');
         if (!stored) return [];
         
         const parsed = JSON.parse(stored);
