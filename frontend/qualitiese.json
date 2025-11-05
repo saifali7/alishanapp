@@ -1,0 +1,69 @@
+{
+  "bra": {
+    "MOLD QUALITIES": [
+      "SUZEN-MOLD",
+      "AMIRI-MOLD",
+      "SILENT-MOLD",
+      "JAIKAT-MOLD",
+      "U-SEEMLESS-MOLD",
+      "MINI-MIZER-MOLD",
+      "ADDITION-MOLD",
+      "JAXXON-MOLD",
+      "CHARLIE-MOLD",
+      "KANISHKA-MOLD",
+      "FLORA-MOLD",
+      "EAZY-MOLD",
+      "EXOTIC-MOLD",
+      "NAIRA-MOLD",
+      "NANCY-MOLD",
+      "CIBA-MOLD",
+      "FIDDING-MOLD"
+    ],
+    "PAD QUALITIES": [
+      "RIHANA-PAD",
+      "SISKA-PAD",
+      "YUKTA-PAD"
+    ],
+    "FOAM QUALITIES": [
+      "KIRTI-FOAM",
+      "DOT-FOAM"
+    ],
+    "COTTON QUALITIES": [
+      "PALLAVI-COTTON",
+      "PARFECTO-COTTON",
+      "JANVI-COTTON",
+      "MEERA-COTTON",
+      "C-CUP COTTON"
+    ],
+    "OTHER QUALITIES": [
+      "LAZO",
+      "CHARU-BRA",
+      "DOVE"
+    ]
+  },
+  "panty": {
+    "PANTY QUALITIES": [
+      "ICE-PANTY",
+      "7200-PANTY"
+    ]
+  },
+  "set": {
+    "SET QUALITIES": [
+      "SONALIKA-SET",
+      "SHAGUN-SET",
+      "DIOMOND-SET",
+      "NICE-SET",
+      "JACKLINE-SET",
+      "EVING-SET",
+      "AROHI-SET",
+      "ARTICLE-55-SET",
+      "SHINING-SET"
+    ]
+  },
+  "blouse": {
+    "BLOUSE QUALITIES": [
+      "ORRY-BLOUSE",
+      "MERRYKOM-BLOUSE"
+    ]
+  }
+}
