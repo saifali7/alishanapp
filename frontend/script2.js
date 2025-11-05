@@ -651,6 +651,257 @@ function resetDifferentSizesColorSelector() {
     }
 }
 
+// ================= ENHANCED QUALITY SELECTOR FUNCTIONS =================
+
+let currentQualities = {};
+
+// Update quality options based on product type
+function updateQualityOptions(productType) {
+    console.log('Updating quality options for:', productType);
+    const qualityCategories = document.getElementById('qualityCategories');
+    const qualityHidden = document.getElementById('quality');
+    const selectedDisplay = document.getElementById('selectedQualityDisplay');
+    
+    if (!qualityCategories || !window.qualityData) {
+        console.log('Quality elements or data not found');
+        return;
+    }
+    
+    // Reset displays
+    selectedDisplay.style.display = 'none';
+    qualityHidden.innerHTML = '<option value="">Select Quality</option>';
+    if (document.getElementById('qualitySearch')) {
+        document.getElementById('qualitySearch').value = '';
+    }
+    
+    const qualities = window.qualityData[productType];
+    currentQualities = qualities || {};
+    
+    if (!qualities || Object.keys(qualities).length === 0) {
+        qualityCategories.innerHTML = `
+            <div class="quality-placeholder">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>No qualities found for ${productType}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let categoriesHTML = '';
+    
+    Object.keys(qualities).forEach((category, index) => {
+        const categoryQualities = qualities[category];
+        
+        categoriesHTML += `
+            <div class="quality-category">
+                <div class="category-header" onclick="toggleQualityCategory(this)">
+                    <span>${category}</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="category-content ${index === 0 ? 'expanded' : ''}">
+                    ${categoryQualities.map(quality => `
+                        <div class="quality-option" data-quality="${quality}" 
+                             onclick="selectQuality('${quality}')">
+                            <div class="quality-checkbox"></div>
+                            <span class="quality-name">${quality}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        // Add to hidden select for form submission
+        categoryQualities.forEach(quality => {
+            const option = new Option(quality, quality);
+            qualityHidden.add(option);
+        });
+    });
+    
+    qualityCategories.innerHTML = categoriesHTML;
+    
+    // Update icons for expanded categories
+    updateCategoryIcons();
+}
+
+// Toggle category expand/collapse
+function toggleQualityCategory(header) {
+    const content = header.nextElementSibling;
+    const isExpanded = content.classList.contains('expanded');
+    
+    // Close all categories first
+    document.querySelectorAll('.category-content.expanded').forEach(expanded => {
+        expanded.classList.remove('expanded');
+    });
+    
+    // Update all icons to down
+    document.querySelectorAll('.category-header i').forEach(icon => {
+        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    });
+    
+    if (!isExpanded) {
+        content.classList.add('expanded');
+        const icon = header.querySelector('i');
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+    }
+    
+    // Scroll to category if expanding
+    if (!isExpanded) {
+        content.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+// Select a quality
+function selectQuality(quality) {
+    const qualityHidden = document.getElementById('quality');
+    const selectedDisplay = document.getElementById('selectedQualityDisplay');
+    const selectedText = document.getElementById('selectedQualityText');
+    
+    // Remove previous selection
+    document.querySelectorAll('.quality-option.selected').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    
+    // Add current selection
+    const selectedOption = document.querySelector(`.quality-option[data-quality="${quality}"]`);
+    if (selectedOption) {
+        selectedOption.classList.add('selected');
+        
+        // Update hidden select
+        qualityHidden.value = quality;
+        
+        // Update display
+        selectedText.textContent = quality;
+        selectedDisplay.style.display = 'block';
+        
+        // Scroll to selected option
+        selectedOption.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        showNotification(`Quality selected: ${quality}`, 'success');
+    }
+}
+
+// Filter quality options based on search
+function filterQualityOptions() {
+    const searchInput = document.getElementById('qualitySearch');
+    if (!searchInput) return;
+    
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const allOptions = document.querySelectorAll('.quality-option');
+    const categories = document.querySelectorAll('.quality-category');
+    
+    if (searchTerm === '') {
+        // Show all when search is empty
+        allOptions.forEach(opt => {
+            opt.style.display = 'flex';
+            const qualityName = opt.querySelector('.quality-name');
+            if (qualityName) {
+                qualityName.innerHTML = qualityName.textContent;
+            }
+        });
+        categories.forEach(cat => cat.style.display = 'block');
+        updateCategoryIcons();
+        return;
+    }
+    
+    let hasMatches = false;
+    
+    categories.forEach(category => {
+        const options = category.querySelectorAll('.quality-option');
+        let categoryHasMatches = false;
+        
+        options.forEach(opt => {
+            const qualityName = opt.querySelector('.quality-name');
+            if (!qualityName) return;
+            
+            const originalText = qualityName.textContent;
+            const matches = originalText.toLowerCase().includes(searchTerm);
+            
+            if (matches) {
+                opt.style.display = 'flex';
+                categoryHasMatches = true;
+                hasMatches = true;
+                
+                // Highlight matching text
+                const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+                qualityName.innerHTML = originalText.replace(regex, '<span class="match-highlight">$1</span>');
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+        
+        // Show/hide category based on matches
+        category.style.display = categoryHasMatches ? 'block' : 'none';
+        
+        // Auto-expand categories with matches
+        const content = category.querySelector('.category-content');
+        const header = category.querySelector('.category-header');
+        if (categoryHasMatches && content && header) {
+            content.classList.add('expanded');
+            const icon = header.querySelector('i');
+            if (icon) {
+                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            }
+        }
+    });
+    
+    // Show no results message
+    const qualityCategories = document.getElementById('qualityCategories');
+    if (!hasMatches && searchTerm !== '' && qualityCategories) {
+        if (!qualityCategories.querySelector('.no-results')) {
+            const noResults = document.createElement('div');
+            noResults.className = 'no-results';
+            noResults.innerHTML = `<i class="fas fa-search"></i><p>No qualities found for "${searchTerm}"</p>`;
+            qualityCategories.appendChild(noResults);
+        }
+    } else {
+        const noResults = qualityCategories.querySelector('.no-results');
+        if (noResults) noResults.remove();
+    }
+}
+
+// Helper function to escape regex characters
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Update category icons based on expanded state
+function updateCategoryIcons() {
+    document.querySelectorAll('.quality-category').forEach((category, index) => {
+        const content = category.querySelector('.category-content');
+        const icon = category.querySelector('.category-header i');
+        
+        if (!content || !icon) return;
+        
+        if (index === 0 && !content.classList.contains('expanded')) {
+            content.classList.add('expanded');
+        }
+        
+        if (content.classList.contains('expanded')) {
+            icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        } else {
+            icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+        }
+    });
+}
+
+// Reset quality selector
+function resetQualitySelector() {
+    const searchInput = document.getElementById('qualitySearch');
+    const selectedDisplay = document.getElementById('selectedQualityDisplay');
+    const qualityHidden = document.getElementById('quality');
+    
+    if (searchInput) searchInput.value = '';
+    if (selectedDisplay) selectedDisplay.style.display = 'none';
+    if (qualityHidden) qualityHidden.value = '';
+    
+    document.querySelectorAll('.quality-option.selected').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    
+    // Reset search filters
+    filterQualityOptions();
+}
+
 // ================= ENHANCED SEARCH VARIABLES =================
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
 let searchAnalytics = JSON.parse(localStorage.getItem('searchAnalytics')) || {};
@@ -1371,6 +1622,9 @@ function addInventoryItem(e) {
     // Reset color selectors
     resetColorSelector();
     resetDifferentSizesColorSelector();
+    
+    // ✅ YE NAYA LINE ADD KAREN - Quality selector reset
+    resetQualitySelector();
     
     const colorSizeItems = document.getElementById('colorSizeItems');
     if (colorSizeItems) {
@@ -2743,6 +2997,7 @@ function setupProductTypeChangeListener() {
     if (productTypeDropdown) {
         productTypeDropdown.addEventListener('change', function() {
             updateQualityOptions(this.value);
+            resetQualitySelector();
         });
     }
 }
@@ -2756,33 +3011,39 @@ function setupEditProductTypeChangeListener() {
     }
 }
 
-function updateQualityOptions(productType) {
-    const qualityDropdown = document.getElementById('quality');
-    if (!qualityDropdown || !window.qualityData) return;
-    
-    while (qualityDropdown.options.length > 1) {
-        qualityDropdown.remove(1);
-    }
-    
-    const qualities = window.qualityData[productType] || [];
-    
-    qualities.forEach(quality => {
-        const option = new Option(quality, quality);
-        qualityDropdown.add(option);
-    });
-}
-
+// ✅ CORRECTED FUNCTION - Edit modal ke liye
 function updateEditQualityOptions(productType) {
     const editQualityDropdown = document.getElementById('editQuality');
     if (!editQualityDropdown || !window.qualityData) return;
     
+    // Clear existing options (first option ko chod kar)
     while (editQualityDropdown.options.length > 1) {
         editQualityDropdown.remove(1);
     }
     
-    const qualities = window.qualityData[productType] || [];
+    const qualities = window.qualityData[productType];
+    if (!qualities) return;
     
-    qualities.forEach(quality => {
+    // ✅ NAYA CODE: Object se saari qualities extract karein
+    let allQualities = [];
+    
+    if (typeof qualities === 'object' && !Array.isArray(qualities)) {
+        // Agar object hai (naya format)
+        Object.values(qualities).forEach(categoryArray => {
+            if (Array.isArray(categoryArray)) {
+                allQualities = allQualities.concat(categoryArray);
+            }
+        });
+    } else if (Array.isArray(qualities)) {
+        // Agar array hai (purana format)
+        allQualities = qualities;
+    }
+    
+    // Remove duplicates
+    allQualities = [...new Set(allQualities)];
+    
+    // Add options to dropdown
+    allQualities.forEach(quality => {
         const option = new Option(quality, quality);
         editQualityDropdown.add(option);
     });
@@ -2795,19 +3056,39 @@ async function loadQualities() {
             throw new Error('Network response was not ok');
         }
         window.qualityData = await response.json();
+        console.log('Qualities loaded:', window.qualityData);
         
         setupProductTypeChangeListener();
         setupEditProductTypeChangeListener();
         
+        // ✅ OPTIONAL: Agar immediately load karna hai to
+        const productType = document.getElementById('productType');
+        if (productType && productType.value) {
+            setTimeout(() => {
+                updateQualityOptions(productType.value);
+            }, 200);
+        }
+        
     } catch (error) {
         console.error('Could not load qualities:', error);
+        // ✅ FALLBACK DATA KO BHI UPDATE KARNA HAI
         window.qualityData = {
-            "bra": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "FLORA", "EAZY", "NANCY"],
-            "panty": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "ADDITION", "FLORA", "EAZY"],
-            "set": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"],
-            "blouse": ["EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "ROYAL"]
+            "bra": {
+                "MOLD QUALITIES": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "FLORA", "EAZY", "NANCY"],
+                "COTTON QUALITIES": ["PALLAVI-COTTON", "PARFECTO-COTTON", "JANVI-COTTON", "MEERA-COTTON", "C-CUP COTTON"]
+            },
+            "panty": {
+                "PANTY QUALITIES": ["ICE-PANTY", "7200-PANTY"]
+            },
+            "set": {
+                "SET QUALITIES": ["SONALIKA-SET", "SHAGUN-SET", "DIOMOND-SET", "NICE-SET", "JACKLINE-SET", "EVING-SET", "AROHI-SET", "ARTICLE-55-SET", "SHINING-SET"]
+            },
+            "blouse": {
+                "BLOUSE QUALITIES": ["ORRY-BLOUSE", "MERRYKOM-BLOUSE"]
+            }
         };
         
+        console.log('Using fallback quality data');
         setupProductTypeChangeListener();
         setupEditProductTypeChangeListener();
     }
