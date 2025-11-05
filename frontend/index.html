@@ -186,24 +186,39 @@
                                             >
                                         </div>
                                     
-                                    <div class="form-group">
-                                        <label for="quality">Quality Name</label>
-                                        <select id="quality" required>
-                                            <option value="">Select Quality</option>
-                                            <option value="LAZO">LAZO</option>
-                                            <option value="ORRY">ORRY</option>
-                                            <option value="NAIRA">NAIRA</option>
-                                            <option value="EXOTIC">EXOTIC</option>
-                                            <option value="PARFECTO">PARFECTO</option>
-                                            <option value="ADDITION">ADDITION</option>
-                                            <option value="JAXXON">JAXXON</option>
-                                            <option value="CHARLIE">CHARLIE</option>
-                                            <option value="KANISHKA">KANISHKA</option>
-                                            <option value="FLORA">FLORA</option>
-                                            <option value="EAZY">EAZY</option>
-                                            <option value="NANCY">NANCY</option>
-                                        </select>
-                                    </div>
+                                    
+                                    <!-- ENHANCED QUALITY SELECTOR WITH CATEGORIES & SEARCH -->
+                                        <div class="form-group">
+                                            <label for="quality">Quality Name</label>
+                                            
+                                            <!-- Quality Search Box -->
+                                            <div class="quality-search-container">
+                                                <input type="text" id="qualitySearch" placeholder="🔍 Search quality by name..." 
+                                                       oninput="filterQualityOptions()">
+                                            </div>
+                                            
+                                            <!-- Enhanced Quality Selector -->
+                                            <div class="quality-selector-container">
+                                                <!-- Hidden select for form submission -->
+                                                <select id="quality" name="quality" required style="display: none;">
+                                                    <option value="">Select Quality</option>
+                                                </select>
+                                                
+                                                <!-- Categories will be loaded here dynamically -->
+                                                <div class="quality-categories" id="qualityCategories">
+                                                    <div class="quality-placeholder">
+                                                        <i class="fas fa-cube"></i>
+                                                        <p>Please select a product type first</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="selected-quality-display" id="selectedQualityDisplay" style="display: none;">
+                                                <strong>Selected:</strong> <span id="selectedQualityText"></span>
+                                            </div>
+                                        </div>
+                                    
+                                    
+                                    
                                     
                                     <!-- IMPROVED MANUAL DATE/TIME SECTION -->
                                     <div class="form-group full-width">
