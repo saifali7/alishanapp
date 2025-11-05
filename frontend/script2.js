@@ -3051,7 +3051,7 @@ function updateEditQualityOptions(productType) {
 
 async function loadQualities() {
     try {
-        const response = await fetch('qualities.json');
+        const response = await fetch('qualitiese.json');
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -3074,11 +3074,11 @@ async function loadQualities() {
         // ✅ FALLBACK DATA KO BHI UPDATE KARNA HAI
         window.qualityData = {
             "bra": {
-                "MOLD QUALITIES": ["LAZO", "ORRY", "NAIRA", "EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "FLORA", "EAZY", "NANCY"],
-                "COTTON QUALITIES": ["PALLAVI-COTTON", "PARFECTO-COTTON", "JANVI-COTTON", "MEERA-COTTON", "C-CUP COTTON"]
+                "MOLD QUALITIES": ["example", "ORRY", "NAIRA", "EXOTIC", "PARFECTO", "ADDITION", "JAXXON", "CHARLIE", "KANISHKA", "FLORA", "EAZY", "NANCY"],
+                "COTTON QUALITIES": ["example", "PARFECTO-COTTON", "JANVI-COTTON", "MEERA-COTTON", "C-CUP COTTON"]
             },
             "panty": {
-                "PANTY QUALITIES": ["ICE-PANTY", "7200-PANTY"]
+                "PANTY QUALITIES": ["example", "7200-PANTY"]
             },
             "set": {
                 "SET QUALITIES": ["SONALIKA-SET", "SHAGUN-SET", "DIOMOND-SET", "NICE-SET", "JACKLINE-SET", "EVING-SET", "AROHI-SET", "ARTICLE-55-SET", "SHINING-SET"]
