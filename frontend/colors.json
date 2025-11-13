@@ -244,6 +244,13 @@
       "backgroundColor": "#f3e5f5",
       "textColor": "#ba68c8",
       "borderColor": "#ba68c8"
-    }
+    },
+    {
+  "name": "MAHNDI",
+  "displayName": "Mahndi", 
+  "backgroundColor": "#e8f5e9",
+  "textColor": "#2e7d32",
+  "borderColor": "#2e7d32"
+}
   ]
 }
