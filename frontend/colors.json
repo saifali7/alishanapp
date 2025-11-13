@@ -202,6 +202,48 @@
       "backgroundColor": "#f5e8d7",
       "textColor": "#6f4e37",
       "borderColor": "#6f4e37"
+    },
+    {
+      "name": "DARK_BLUE",
+      "displayName": "Dark Blue",
+      "backgroundColor": "#1a237e",
+      "textColor": "#bbdefb",
+      "borderColor": "#bbdefb"
+    },
+    {
+      "name": "BABY_PINK",
+      "displayName": "Baby Pink",
+      "backgroundColor": "#fce4ec",
+      "textColor": "#f8bbd9",
+      "borderColor": "#f8bbd9"
+    },
+    {
+      "name": "PEACE",
+      "displayName": "Peace",
+      "backgroundColor": "#e8f5e9",
+      "textColor": "#81c784",
+      "borderColor": "#81c784"
+    },
+    {
+      "name": "ROYAL_BLUE",
+      "displayName": "Royal Blue",
+      "backgroundColor": "#e3f2fd",
+      "textColor": "#1565c0",
+      "borderColor": "#1565c0"
+    },
+    {
+      "name": "ALMOND",
+      "displayName": "Almond",
+      "backgroundColor": "#fff3e0",
+      "textColor": "#efd5b7",
+      "borderColor": "#efd5b7"
+    },
+    {
+      "name": "RANI",
+      "displayName": "Rani",
+      "backgroundColor": "#f3e5f5",
+      "textColor": "#ba68c8",
+      "borderColor": "#ba68c8"
     }
   ]
 }
