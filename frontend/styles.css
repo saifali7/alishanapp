@@ -2304,3 +2304,687 @@ footer p {
         padding: 8px 12px;
     }
 }
+
+
+/* ALTERNATIVE - More compact styling */
+.size-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.size-input-group {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    background: white;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.size-input-group label {
+    display: block;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.size-input-row {
+    display: flex;
+    gap: 5px;
+}
+
+.size-dozen, .edit-size-dozen {
+    flex: 2;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+.size-pieces, .edit-size-pieces {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.8rem;
+    max-width: 50px;
+}
+
+
+/* ================= PIECES DISPLAY STYLES ================= */
+.size-chart-with-pieces {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.size-item-with-pieces {
+    text-align: center;
+    padding: 8px;
+    background-color: var(--white);
+    border-radius: 6px;
+    border: 1px solid var(--light-gray);
+}
+
+.size-item-with-pieces .size-label {
+    font-size: 0.75rem;
+    color: var(--gray);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.size-values {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dozen-value {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--dark);
+}
+
+.pieces-value {
+    font-size: 0.7rem;
+    color: var(--primary);
+    background: rgba(67, 97, 238, 0.1);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.total-amount-step {
+    background: rgba(76, 201, 240, 0.1);
+    padding: 8px;
+    border-radius: 6px;
+    border-left: 3px solid var(--success);
+}
+
+.total-amount-step .step-label {
+    color: var(--success);
+    font-weight: 700;
+}
+
+.total-amount-step .step-value {
+    color: var(--success);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .size-chart-with-pieces {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .size-chart-with-pieces {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ================= SIMPLE DISPLAY STYLES ================= */
+.size-chart-simple {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.size-item-simple {
+    text-align: center;
+    padding: 10px;
+    background-color: var(--white);
+    border-radius: 6px;
+    border: 1px solid var(--light-gray);
+}
+
+.size-item-simple .size-label {
+    font-size: 0.75rem;
+    color: var(--gray);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.size-item-simple .size-value {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--primary);
+}
+
+
+
+/* ================= SIZE INPUT STYLES - FIXED ================= */
+.size-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.size-input-group {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    background: rgba(67, 97, 238, 0.05);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--light-gray);
+    min-height: 80px;
+    justify-content: center;
+}
+
+.size-input-group label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--primary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.size-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.size-dozen, .edit-size-dozen {
+    flex: 2;
+    padding: 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.85rem;
+    background: var(--white);
+}
+
+.size-pieces, .edit-size-pieces {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.85rem;
+    background: var(--white);
+    max-width: 60px;
+}
+
+.size-dozen::placeholder,
+.size-pieces::placeholder,
+.edit-size-dozen::placeholder, 
+.edit-size-pieces::placeholder {
+    color: var(--gray);
+    font-size: 0.75rem;
+}
+
+/* ================= INVENTORY CARD SIZE DISPLAY ================= */
+.size-chart-simple {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+.size-item-simple {
+    text-align: center;
+    padding: 8px;
+    background-color: var(--white);
+    border-radius: 6px;
+    border: 1px solid var(--light-gray);
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.size-item-simple .size-label {
+    font-size: 0.7rem;
+    color: var(--gray);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.size-item-simple .size-value {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--primary);
+}
+
+/* Hide empty size items in display */
+.size-item-simple:empty {
+    display: none;
+}
+
+/* ================= RESPONSIVE FIXES ================= */
+@media (max-width: 1200px) {
+    .size-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .size-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .size-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .size-chart-simple {
+        grid-template-columns: repeat(3, 1fr);
+        max-height: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .size-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .size-chart-simple {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .size-input-row {
+        flex-direction: column;
+    }
+    
+    .size-pieces, .edit-size-pieces {
+        max-width: 100%;
+    }
+}
+
+/* Scrollbar for size chart */
+.size-chart-simple::-webkit-scrollbar {
+    width: 4px;
+}
+
+.size-chart-simple::-webkit-scrollbar-track {
+    background: var(--light-gray);
+}
+
+.size-chart-simple::-webkit-scrollbar-thumb {
+    background: var(--gray);
+    border-radius: 2px;
+}
+
+
+
+
+
+
+
+/* ================= SIZE INPUT STYLES - FIXED ================= */
+.size-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 1rem;
+    width: 100%;
+}
+
+.size-input-group {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    background: rgba(67, 97, 238, 0.05);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--light-gray);
+    min-height: 70px;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.size-input-group label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--primary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.size-input-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    width: 100%;
+}
+
+.size-dozen, .edit-size-dozen {
+    flex: 2;
+    padding: 6px 4px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.8rem;
+    background: var(--white);
+    min-width: 0;
+    width: 100%;
+}
+
+.size-pieces, .edit-size-pieces {
+    flex: 1;
+    padding: 6px 4px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.8rem;
+    background: var(--white);
+    min-width: 0;
+    max-width: 50px;
+}
+
+.size-dozen::placeholder,
+.size-pieces::placeholder,
+.edit-size-dozen::placeholder, 
+.edit-size-pieces::placeholder {
+    color: var(--gray);
+    font-size: 0.7rem;
+}
+
+/* Input number arrows hide for small screens */
+.size-dozen::-webkit-outer-spin-button,
+.size-dozen::-webkit-inner-spin-button,
+.size-pieces::-webkit-outer-spin-button,
+.size-pieces::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.size-dozen[type=number],
+.size-pieces[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* ================= RESPONSIVE FIXES ================= */
+@media (max-width: 1200px) {
+    .size-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .size-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .size-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+    
+    .size-input-group {
+        padding: 6px;
+        min-height: 65px;
+    }
+    
+    .size-input-row {
+        gap: 3px;
+    }
+    
+    .size-dozen, .edit-size-dozen {
+        padding: 5px 3px;
+        font-size: 0.75rem;
+    }
+    
+    .size-pieces, .edit-size-pieces {
+        padding: 5px 3px;
+        font-size: 0.75rem;
+        max-width: 45px;
+    }
+}
+
+@media (max-width: 480px) {
+    .size-grid {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+    
+    .size-input-group {
+        min-height: 60px;
+    }
+    
+    .size-input-row {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .size-dozen, .edit-size-dozen {
+        flex: 3;
+    }
+    
+    .size-pieces, .edit-size-pieces {
+        flex: 1;
+        max-width: 40px;
+    }
+}
+
+/* For very small screens */
+@media (max-width: 360px) {
+    .size-input-row {
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .size-dozen, .edit-size-dozen {
+        width: 100%;
+    }
+    
+    .size-pieces, .edit-size-pieces {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+
+
+
+/* ================= AUTO-EXPANDING SIZE GRID ================= */
+.size-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 1rem;
+    width: 100%;
+}
+
+.size-input-group {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    background: rgba(67, 97, 238, 0.05);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--light-gray);
+    min-height: 85px;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.size-input-group:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.size-input-group label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--primary);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.size-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+.size-dozen, .edit-size-dozen {
+    flex: 2;
+    padding: 10px 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.9rem;
+    background: var(--white);
+    min-width: 0;
+    transition: border-color 0.3s ease;
+}
+
+.size-dozen:focus, .edit-size-dozen:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.size-pieces, .edit-size-pieces {
+    flex: 1;
+    padding: 10px 6px;
+    border: 1px solid var(--light-gray);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.9rem;
+    background: var(--white);
+    min-width: 0;
+    max-width: 60px;
+    transition: border-color 0.3s ease;
+}
+
+.size-pieces:focus, .edit-size-pieces:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+/* ================= DIFFERENT SIZES COUNT STYLES ================= */
+
+/* When only 1-2 sizes - Very big */
+.size-input-group:only-child,
+.size-input-group:nth-last-child(1):nth-child(1) {
+    min-height: 100px;
+    padding: 15px;
+}
+
+.size-input-group:only-child .size-dozen,
+.size-input-group:only-child .size-pieces,
+.size-input-group:nth-last-child(1):nth-child(1) .size-dozen,
+.size-input-group:nth-last-child(1):nth-child(1) .size-pieces {
+    padding: 12px 10px;
+    font-size: 1rem;
+}
+
+/* When 3-4 sizes - Medium big */
+.size-input-group:nth-last-child(-n+4):nth-child(n+3) {
+    min-height: 90px;
+    padding: 12px;
+}
+
+/* When 5+ sizes - Normal */
+.size-input-group:nth-last-child(n+5) {
+    min-height: 80px;
+    padding: 10px;
+}
+
+/* ================= INVENTORY CARD SIZE DISPLAY ================= */
+.size-chart-simple {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.size-item-simple {
+    text-align: center;
+    padding: 12px 8px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border: 1px solid var(--light-gray);
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.size-item-simple:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.size-item-simple .size-label {
+    font-size: 0.75rem;
+    color: var(--gray);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.size-item-simple .size-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+    .size-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px;
+    }
+    
+    .size-input-group {
+        min-height: 75px;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .size-grid {
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+        gap: 6px;
+    }
+    
+    .size-input-group {
+        min-height: 70px;
+        padding: 8px;
+    }
+}
+
+
+
+
+
+
+    
