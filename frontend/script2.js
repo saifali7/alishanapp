@@ -1,8 +1,167 @@
+
+// ================= DEBUG TEST FUNCTIONS =================
+console.log("🔴 SCRIPT2.JS LOADED!");
+
+function testPiecesInputs() {
+    console.log("🟡 TEST: Checking pieces inputs...");
+    
+    const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+    let foundInputs = 0;
+    
+    sizes.forEach(size => {
+        const dozenInput = document.getElementById(`size${size}`);
+        const piecesInput = document.getElementById(`size${size}_pieces`);
+        
+        if (dozenInput) {
+            console.log(`✅ Size ${size} dozen input found`);
+            foundInputs++;
+        } else {
+            console.log(`❌ Size ${size} dozen input NOT found`);
+        }
+        
+        if (piecesInput) {
+            console.log(`✅ Size ${size} pieces input found`);
+            foundInputs++;
+        } else {
+            console.log(`❌ Size ${size} pieces input NOT found`);
+        }
+    });
+    
+    console.log(`📊 Total inputs found: ${foundInputs}`);
+    return foundInputs > 0;
+}
+
+// Page load pe test karo
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("🟡 DOM Content Loaded!");
+    setTimeout(() => {
+        console.log("🟡 Running pieces test...");
+        testPiecesInputs();
+    }, 1000);
+});
+
+
+
+
 // ================= ENHANCED COLOR SELECTOR =================
 let selectedColors = [];
 let editSelectedColors = [];
 let differentSizesSelectedColors = []; // ✅ YE NAYA VARIABLE ADD KAREN
 let colorData = [];
+
+
+// ================= PIECES CALCULATION FUNCTIONS =================
+
+// Calculate total with pieces for SAME sizes
+function calculateTotalWithPieces(isEdit = false) {
+    const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+    let totalDozens = 0;
+    let totalPieces = 0;
+    
+    sizes.forEach(size => {
+        const prefix = isEdit ? 'edit' : '';
+        const dozenInput = document.getElementById(`${prefix}size${size}`);
+        const piecesInput = document.getElementById(`${prefix}size${size}_pieces`);
+        
+        if (dozenInput && piecesInput) {
+            const dozens = parseInt(dozenInput.value) || 0;
+            const pieces = parseInt(piecesInput.value) || 0;
+            
+            totalDozens += dozens;
+            totalPieces += pieces;
+        }
+    });
+    
+    // Convert pieces to dozens
+    const additionalDozens = Math.floor(totalPieces / 12);
+    const remainingPieces = totalPieces % 12;
+    
+    totalDozens += additionalDozens;
+    
+    return {
+        dozens: totalDozens,
+        pieces: remainingPieces,
+        totalDecimal: totalDozens + (remainingPieces / 12)
+    };
+}
+
+// Calculate total for DIFFERENT sizes with pieces
+function calculateDifferentSizesTotal(isEdit = false) {
+    const containerId = isEdit ? 'editColorSizeItems' : 'colorSizeItems';
+    const colorSizeItems = document.getElementById(containerId);
+    
+    if (!colorSizeItems) return { dozens: 0, pieces: 0, totalDecimal: 0 };
+    
+    let totalDozens = 0;
+    let totalPieces = 0;
+    
+    const colorItems = colorSizeItems.getElementsByClassName('color-size-item');
+    
+    for (let item of colorItems) {
+        let colorDozens = 0;
+        let colorPieces = 0;
+        
+        [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
+            const prefix = isEdit ? 'edit-' : '';
+            const dozenInput = item.querySelector(`.${prefix}color-size-${size}`);
+            const piecesInput = item.querySelector(`.${prefix}color-size-${size}_pieces`);
+            
+            if (dozenInput) {
+                colorDozens += parseInt(dozenInput.value) || 0;
+            }
+            if (piecesInput) {
+                colorPieces += parseInt(piecesInput.value) || 0;
+            }
+        });
+        
+        // Convert pieces to dozens for this color
+        const additionalDozens = Math.floor(colorPieces / 12);
+        const remainingPieces = colorPieces % 12;
+        
+        totalDozens += colorDozens + additionalDozens;
+        totalPieces += remainingPieces;
+    }
+    
+    // Final conversion if total pieces exceed 12
+    const finalAdditionalDozens = Math.floor(totalPieces / 12);
+    const finalRemainingPieces = totalPieces % 12;
+    
+    totalDozens += finalAdditionalDozens;
+    
+    return {
+        dozens: totalDozens,
+        pieces: finalRemainingPieces,
+        totalDecimal: totalDozens + (finalRemainingPieces / 12)
+    };
+}
+
+// Calculate total amount with pieces consideration
+function calculateTotalAmountWithPieces(totalDozens, price) {
+    const dozens = Math.floor(totalDozens);
+    const piecesDecimal = totalDozens - dozens;
+    const pieces = Math.round(piecesDecimal * 12);
+    
+    const dozenAmount = dozens * price;
+    const pieceAmount = pieces * (price / 12);
+    
+    return dozenAmount + pieceAmount;
+}
+
+// Format display for dozens and pieces
+function formatDozensDisplay(totalDozens) {
+    const dozens = Math.floor(totalDozens);
+    const piecesDecimal = totalDozens - dozens;
+    const pieces = Math.round(piecesDecimal * 12);
+    
+    if (pieces === 0) {
+        return `${dozens} dozens`;
+    } else {
+        return `${totalDozens.toFixed(2)} dozens (${dozens} dozens + ${pieces} pieces)`;
+    }
+}
+
+
+
 
 // Load colors from JSON
 async function loadColors() {
@@ -570,7 +729,7 @@ function generateColorSizeItems() {
     // Clear existing items
     colorSizeItems.innerHTML = '';
     
-    // Create size inputs for each selected color
+    // Create size inputs for each selected color WITH PIECES
     differentSizesSelectedColors.forEach((colorName, index) => {
         const color = getColorStyle(colorName);
         if (!color) return;
@@ -578,6 +737,19 @@ function generateColorSizeItems() {
         const colorSizeItem = document.createElement('div');
         colorSizeItem.className = 'color-size-item';
         colorSizeItem.setAttribute('data-color', colorName);
+        
+        let sizeInputsHTML = '';
+        [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
+            sizeInputsHTML += `
+                <div class="size-input-group">
+                    <label>Size ${size}</label>
+                    <div class="size-input-row">
+                        <input type="number" class="color-size-${size}" data-color="${colorName}" min="0" step="1" placeholder="Dozens" value="0">
+                        <input type="number" class="color-size-${size}_pieces" data-color="${colorName}" min="0" max="11" step="1" placeholder="Pcs" value="0">
+                    </div>
+                </div>
+            `;
+        });
         
         colorSizeItem.innerHTML = `
             <div class="color-size-header" style="background-color: ${color.backgroundColor}; color: ${color.textColor}; border-color: ${color.borderColor}">
@@ -590,12 +762,7 @@ function generateColorSizeItems() {
                 </button>
             </div>
             <div class="size-grid">
-                ${[28, 30, 32, 34, 36, 38, 40, 42, 44, 46].map(size => `
-                    <div class="size-input-group">
-                        <label>Size ${size}</label>
-                        <input type="number" class="color-size-${size}" data-color="${colorName}" min="0" step="1" placeholder="Dozens" value="0">
-                    </div>
-                `).join('')}
+                ${sizeInputsHTML}
             </div>
         `;
         
@@ -976,6 +1143,7 @@ function initManualDateTime() {
 }
 
 function addItemInChronologicalOrder(newItem) {
+    console.log("📥 Adding item in chronological order...");
     const newItemDate = new Date(newItem.dateTime);
     
     let insertIndex = inventoryItems.length;
@@ -990,6 +1158,8 @@ function addItemInChronologicalOrder(newItem) {
     }
     
     inventoryItems.splice(insertIndex, 0, newItem);
+    console.log(`✅ Item added. Total items: ${inventoryItems.length}`);
+    console.log("📦 New item at index 0:", inventoryItems[0]);
 }
 
 // ================= VALIDATION FUNCTIONS =================
@@ -1047,7 +1217,19 @@ function validateInventoryItem(item) {
         return false;
     }
     
-    // Different sizes specific validation
+    // Pieces validation for same sizes
+    if (item.sizeOption === 'same') {
+        const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+        sizes.forEach(size => {
+            const pieces = item[`size${size}_pieces`];
+            if (pieces !== undefined && (pieces < 0 || pieces > 11)) {
+                console.error(`Invalid pieces for size ${size}: ${pieces}`);
+                return false;
+            }
+        });
+    }
+    
+    // ✅ FIXED: Different sizes specific validation WITH PIECES SUPPORT
     if (item.sizeOption === 'different') {
         const hasInvalidColors = item.colors.some(color => {
             if (typeof color !== 'object' || color === null) {
@@ -1062,6 +1244,22 @@ function validateInventoryItem(item) {
             
             if (!color.sizes || typeof color.sizes !== 'object') {
                 console.error('Invalid color: sizes should be object');
+                return true;
+            }
+            
+            // ✅ FIXED: Validate pieces in different sizes
+            const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+            const hasInvalidPieces = sizes.some(size => {
+                const pieces = color.sizes[`size${size}_pieces`];
+                // Pieces can be undefined (not entered) but if present, must be valid
+                if (pieces !== undefined && (pieces < 0 || pieces > 11 || !Number.isInteger(pieces))) {
+                    console.error(`Invalid pieces for color ${color.name} size ${size}: ${pieces}`);
+                    return true;
+                }
+                return false;
+            });
+            
+            if (hasInvalidPieces) {
                 return true;
             }
             
@@ -1096,6 +1294,7 @@ function validateInventoryItem(item) {
     
     return true;
 }
+
 
 function loadInventoryData() {
     let stored; // ✅ YEH NAYI LINE ADD KARO
@@ -1441,19 +1640,28 @@ function removeEditColorSizeItem(button) {
 
 // ================= INVENTORY MANAGEMENT FUNCTIONS =================
 
+// ================= ADD INVENTORY ITEM FUNCTION =================
+// ================= ADD INVENTORY ITEM FUNCTION WITH DEBUG =================
+// ================= ADD INVENTORY ITEM FUNCTION =================
+// ================= ADD INVENTORY ITEM FUNCTION =================
 function addInventoryItem(e) {
     e.preventDefault();
     
+    console.log("🟢 === ADD INVENTORY ITEM STARTED ===");
+    
     if (!validateManualDate()) {
+        console.log("❌ Manual date validation failed");
         return;
     }
     
-    // Get selected colors based on size option
     const sizeOption = document.querySelector('input[name="sizeOption"]:checked');
     if (!sizeOption) {
+        console.log("❌ No size option selected");
         showNotification('Please select a size option', 'error');
         return;
     }
+    
+    console.log(`✅ Size option selected: ${sizeOption.value}`);
     
     const productType = document.getElementById('productType').value;
     const cupSize = document.getElementById('cupSize').value;
@@ -1465,11 +1673,13 @@ function addInventoryItem(e) {
     const notes = document.getElementById('notes').value;
     
     if (!productType) {
+        console.log("❌ Product Type missing");
         showNotification('Product Type is required', 'error');
         return;
     }
     
     if (!quality) {
+        console.log("❌ Quality Name missing");
         showNotification('Quality Name is required', 'error');
         return;
     }
@@ -1479,35 +1689,71 @@ function addInventoryItem(e) {
     let totalDozens = 0;
     
     if (sizeOption.value === 'same') {
-        // SAME SIZES - Use color selector
+        console.log("🔄 Processing SAME SIZES...");
+        
         const selectedColorsFromPicker = getSelectedColors();
+        console.log(`🎨 Selected colors: ${selectedColorsFromPicker}`);
         
         if (selectedColorsFromPicker.length === 0) {
+            console.log("❌ No colors selected");
             showNotification('Please select at least one color', 'error');
             return;
         }
         
         colors = selectedColorsFromPicker.map(color => color.toUpperCase());
         
-        const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+        // Calculate total with pieces
+        console.log("🧮 Calculating total with pieces...");
+        const totalCalculation = calculateTotalWithPieces(false);
+        console.log(`📊 Total calculation result:`, totalCalculation);
         
-        // ✅ CORRECTED: PEHLE SIRF SIZE DATA COLLECT KARO (COLOR SE MULTIPLY NAHI)
+        const colorCount = colors.length;
+        console.log(`🎨 Color count: ${colorCount}`);
+        
+        // Multiply by color count
+        let totalDozensAfterColor = totalCalculation.dozens * colorCount;
+        let totalPiecesAfterColor = totalCalculation.pieces * colorCount;
+        
+        console.log(`📈 After color multiplication - Dozens: ${totalDozensAfterColor}, Pieces: ${totalPiecesAfterColor}`);
+        
+        // Convert pieces to dozens
+        const additionalDozensFromPieces = Math.floor(totalPiecesAfterColor / 12);
+        const remainingPiecesAfterColor = totalPiecesAfterColor % 12;
+        
+        console.log(`🔄 Converting pieces: ${totalPiecesAfterColor} pieces = ${additionalDozensFromPieces} dozen + ${remainingPiecesAfterColor} pieces`);
+        
+        totalDozensAfterColor += additionalDozensFromPieces;
+        totalDozens = totalDozensAfterColor + (remainingPiecesAfterColor / 12);
+        
+        console.log(`💰 Final total dozens: ${totalDozens}`);
+        
+        // Store size data with pieces
+        console.log("💾 Storing size data with pieces...");
+        const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         sizes.forEach(size => {
-            const element = document.getElementById(`size${size}`);
-            if (element) {
-                const sizeValue = parseInt(element.value) || 0;
-                sizeData[`size${size}`] = sizeValue;
-                totalDozens += sizeValue; // ✅ DIRECT TOTAL MEIN ADD KARO (COLOR MULTIPLY NAHI)
+            const dozenInput = document.getElementById(`size${size}`);
+            const piecesInput = document.getElementById(`size${size}_pieces`);
+            
+            if (dozenInput && piecesInput) {
+                const dozenValue = parseInt(dozenInput.value) || 0;
+                const piecesValue = parseInt(piecesInput.value) || 0;
+                
+                sizeData[`size${size}`] = dozenValue;
+                sizeData[`size${size}_pieces`] = piecesValue;
+                
+                console.log(`💾 Stored - Size ${size}: ${dozenValue} dozen, ${piecesValue} pieces`);
             }
         });
         
-        // ✅ TOTAL DOZENS MEIN COLORS KA MULTIPLY NAHI KARNA
-        // totalDozens = totalDozens * colors.length; // ❌ YE LINE COMPLETELY REMOVE
+        console.log("📦 Final sizeData object:", sizeData);
         
     } else {
-        // DIFFERENT SIZES - Use different sizes color selector
+        // ================= FIXED DIFFERENT SIZES SECTION =================
+        console.log("🔄 Processing DIFFERENT SIZES...");
+        
         const colorSizeItems = document.getElementById('colorSizeItems');
         if (!colorSizeItems || colorSizeItems.children.length === 0) {
+            console.log("❌ No color size items found");
             showNotification('Please generate size inputs for selected colors first', 'error');
             return;
         }
@@ -1518,38 +1764,58 @@ function addInventoryItem(e) {
         
         // Get all color size items
         const colorSizeElements = colorSizeItems.getElementsByClassName('color-size-item');
+        console.log(`🎨 Found ${colorSizeElements.length} color items`);
         
         for (let i = 0; i < colorSizeElements.length; i++) {
             const item = colorSizeElements[i];
             const colorName = item.getAttribute('data-color');
+            console.log(`🎨 Processing color: ${colorName}`);
             
             if (colorName) {
                 const colorSizes = {};
                 let colorTotal = 0;
                 let hasSizeData = false;
                 
+                // ✅ FIXED: Properly process all sizes with pieces
                 [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
                     const sizeInput = item.querySelector(`.color-size-${size}`);
-                    if (sizeInput) {
-                        const sizeValue = parseInt(sizeInput.value) || 0;
-                        colorSizes[`size${size}`] = sizeValue;
-                        colorTotal += sizeValue;
-                        if (sizeValue > 0) hasSizeData = true;
+                    const piecesInput = item.querySelector(`.color-size-${size}_pieces`);
+                    
+                    // ✅ FIX: Ensure both inputs exist before processing
+                    if (sizeInput && piecesInput) {
+                        const dozenValue = parseInt(sizeInput.value) || 0;
+                        const piecesValue = parseInt(piecesInput.value) || 0;
+                        
+                        // ✅ FIX: Store both dozen and pieces in colorSizes
+                        colorSizes[`size${size}`] = dozenValue;
+                        colorSizes[`size${size}_pieces`] = piecesValue;
+                        
+                        // ✅ FIX: Correct calculation (12 pieces = 1 dozen)
+                        colorTotal += dozenValue + (piecesValue / 12);
+                        if (dozenValue > 0 || piecesValue > 0) hasSizeData = true;
+                        
+                        console.log(`📦 Color ${colorName} - Size ${size}: ${dozenValue} dozen, ${piecesValue} pieces`);
                     }
                 });
                 
                 if (hasSizeData) {
                     colorObjects.push({
                         name: colorName.toUpperCase(),
-                        sizes: colorSizes,
+                        sizes: colorSizes, // ✅ This now contains pieces data
                         totalDozens: colorTotal
                     });
                     
                     totalDozens += colorTotal;
                     hasAtLeastOneColor = true;
+                    console.log(`✅ Color ${colorName} added - Total: ${colorTotal} dozen`);
+                    
+                    // ✅ DEBUG: Verify pieces are stored
+                    const piecesProps = Object.keys(colorSizes).filter(key => key.includes('_pieces'));
+                    console.log(`🔍 Pieces stored for ${colorName}: ${piecesProps.length}`);
                 } else {
                     const color = getColorStyle(colorName);
                     const colorDisplayName = color ? color.displayName : colorName;
+                    console.log(`❌ No size data for color: ${colorDisplayName}`);
                     showNotification(`Please enter sizes for color: ${colorDisplayName}`, 'error');
                     allColorsValid = false;
                 }
@@ -1557,20 +1823,38 @@ function addInventoryItem(e) {
         }
         
         if (!hasAtLeastOneColor) {
+            console.log("❌ No colors with size data");
             showNotification('Please enter sizes for at least one color', 'error');
             return;
         }
         
-        if (!allColorsValid) return;
+        if (!allColorsValid) {
+            console.log("❌ Some colors have invalid data");
+            return;
+        }
         
         colors = colorObjects;
+        console.log(`🎯 Final different sizes - Colors: ${colors.length}, Total dozens: ${totalDozens}`);
+        
+        // ✅ FINAL VERIFICATION: Check pieces in color objects
+        console.log("🔍 FINAL VERIFICATION - Color Objects:", colorObjects);
+        colorObjects.forEach((colorObj, index) => {
+            const piecesProps = Object.keys(colorObj.sizes).filter(key => key.includes('_pieces'));
+            console.log(`🎨 Color ${colorObj.name} pieces in final object: ${piecesProps.length}`);
+            piecesProps.forEach(prop => {
+                console.log(`   ${prop}: ${colorObj.sizes[prop]}`);
+            });
+        });
     }
     
-    const totalPieces = calculateTotalPieces(totalDozens);
+    console.log("✅ Reached before total calculation");
+    const totalPieces = totalDozens * 12;
     const totalAmount = calculateTotalAmount(totalDozens, price);
     
+    console.log("✅ Reached before dateInfo");
     const dateInfo = getEntryDateTime();
     
+    console.log("✅ Reached before newItem creation");
     const newItem = {
         id: Date.now(),
         code: generateUniqueCode(),
@@ -1586,29 +1870,61 @@ function addInventoryItem(e) {
         colors,
         notes,
         totalDozens,
-        totalPieces,
+        totalPieces: totalDozens * 12,
         totalAmount,
         inStock: true,
         sizeOption: sizeOption.value,
         isManualEntry: dateInfo.isManual
     };
     
-    if (sizeOption.value === 'same') {
-        Object.assign(newItem, sizeData);
+    // ✅ DEBUG: Check colors array in newItem
+    console.log("🔍 DEBUG NEWITEM COLORS:", newItem.colors);
+    if (newItem.colors && newItem.colors.length > 0) {
+        newItem.colors.forEach((color, index) => {
+            if (color.sizes) {
+                const piecesProps = Object.keys(color.sizes).filter(key => key.includes('_pieces'));
+                console.log(`🎨 Stored color ${color.name} pieces: ${piecesProps.length}`);
+                piecesProps.forEach(prop => {
+                    console.log(`   ${prop}: ${color.sizes[prop]}`);
+                });
+            }
+        });
     }
     
-    // Debug log
-    console.log('Adding new item:', newItem);
+    // Add size data to item if same sizes
+    if (sizeOption.value === 'same') {
+        console.log("🔗 Adding sizeData to newItem...");
+        Object.assign(newItem, sizeData);
+        console.log("✅ sizeData added to newItem");
+    }
     
+    // DEBUG: Check final item data
+    console.log("📄 === FINAL ITEM DATA ===");
+    console.log("New Item:", newItem);
+    
+    // Check specifically for pieces in the item
+    const piecesProperties = Object.keys(newItem).filter(key => key.includes('_pieces'));
+    console.log(`🔍 Pieces properties found: ${piecesProperties.length}`);
+    piecesProperties.forEach(prop => {
+        console.log(`📦 ${prop}: ${newItem[prop]}`);
+    });
+    
+    console.log("✅ Reached before validation");
     if (!validateInventoryItem(newItem)) {
+        console.log("❌ Item validation failed");
         showNotification('Invalid item data. Please check all fields.', 'error');
         return;
     }
     
+    console.log("✅ Item validation passed");
+    console.log("✅ Reached before addItemInChronologicalOrder");
+    
     addItemInChronologicalOrder(newItem);
     
+    console.log("✅ Reached before afterDataModification");
     afterDataModification();
     
+    console.log("✅ Reached before form reset");
     // Reset form
     document.getElementById('productForm').reset();
     
@@ -1622,8 +1938,6 @@ function addInventoryItem(e) {
     // Reset color selectors
     resetColorSelector();
     resetDifferentSizesColorSelector();
-    
-    // ✅ YE NAYA LINE ADD KAREN - Quality selector reset
     resetQualitySelector();
     
     const colorSizeItems = document.getElementById('colorSizeItems');
@@ -1632,8 +1946,41 @@ function addInventoryItem(e) {
     }
     
     const entryType = newItem.isManualEntry ? 'Old entry' : 'New entry';
-    showNotification(`${entryType} added successfully! Total: ${totalDozens} dozens`, 'success');
+    console.log(`🎉 ${entryType} added successfully! Total: ${totalDozens.toFixed(2)} dozens`);
+    showNotification(`${entryType} added successfully! Total: ${totalDozens.toFixed(2)} dozens`, 'success');
+    
+    console.log("🟢 === ADD INVENTORY ITEM COMPLETED ===\n");
+
 }
+
+
+// ================= DEBUG HELPER FUNCTION =================
+function debugPiecesInputs() {
+    console.log("🐛 === DEBUG PIECES INPUTS ===");
+    const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+    
+    let totalFound = 0;
+    sizes.forEach(size => {
+        const dozenInput = document.getElementById(`size${size}`);
+        const piecesInput = document.getElementById(`size${size}_pieces`);
+        
+        if (dozenInput && piecesInput) {
+            console.log(`✅ Size ${size}: Dozen=${dozenInput.value}, Pieces=${piecesInput.value}`);
+            totalFound++;
+        } else {
+            console.log(`❌ Size ${size}: Inputs not found`);
+        }
+    });
+    
+    console.log(`📊 Total inputs found: ${totalFound}/10`);
+    
+    // Test calculation
+    const calc = calculateTotalWithPieces(false);
+    console.log("🧮 Test calculation:", calc);
+}
+
+// Temporary: Add this to test pieces inputs
+// debugPiecesInputs();
 
 function updateInventoryDisplay() {
     displayPaginatedItems();
@@ -1672,10 +2019,12 @@ function createInventoryCard(item, index) {
     const card = document.createElement('div');
     card.className = 'inventory-card';
     
-    // ✅ Card header ke liye ORIGINAL date (manual ya current)
-    const originalDate = new Date(item.dateTime);
+    if (!item) {
+        console.error('Invalid item at index:', index);
+        return card;
+    }
     
-    // ✅ Additional info ke liye CURRENT date (jab add kiya)
+    const originalDate = new Date(item.dateTime);
     const currentDate = item.addedDateTime ? new Date(item.addedDateTime) : new Date();
     
     const formattedOriginalDate = originalDate.toLocaleDateString('en-US', {
@@ -1739,27 +2088,11 @@ function createInventoryCard(item, index) {
     
     const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
     let totalDozensAllColors = 0;
-    
-    if (isSimpleColorFormat) {
-        // ✅ CORRECTED: DISPLAY TIME PE MULTIPLY KARNA HAI
-        let singleColorTotal = 0;
-        sizes.forEach(size => {
-            singleColorTotal += item[`size${size}`] || 0;
-        });
-        totalDozensAllColors = singleColorTotal * item.colors.length; // ✅ YAHAN MULTIPLY KARNA HAI
-    } else if (hasColors) {
-        item.colors.forEach(color => {
-            let colorTotal = 0;
-            sizes.forEach(size => {
-                colorTotal += color.sizes[`size${size}`] || 0;
-            });
-            totalDozensAllColors += colorTotal;
-        });
-    }
-    
-    const totalAmount = totalDozensAllColors * item.price;
-    
+    let totalAmount = 0;
+    let displayCalculation = '';
+    let sizeChartHTML = '';
     let colorTags = '';
+    
     if (hasColors) {
         if (isSimpleColorFormat) {
             colorTags = item.colors.map(color => {
@@ -1768,10 +2101,135 @@ function createInventoryCard(item, index) {
             }).join('');
         } else {
             colorTags = item.colors.map(color => {
-                const colorClass = `color-${color.name.toLowerCase()}`;
-                return `<span class="color-tag ${colorClass}">${color.name}</span>`;
+                if (color && color.name) {
+                    const colorClass = `color-${color.name.toLowerCase()}`;
+                    return `<span class="color-tag ${colorClass}">${color.name}</span>`;
+                }
+                return '';
             }).join('');
         }
+    }
+    
+    if (isSimpleColorFormat) {
+        // ✅ Calculate with pieces for SAME SIZES
+        let singleColorTotalDozens = 0;
+        let singleColorTotalPieces = 0;
+        
+        sizes.forEach(size => {
+            const dozens = item[`size${size}`] || 0;
+            const pieces = item[`size${size}_pieces`] || 0;
+            
+            singleColorTotalDozens += dozens;
+            singleColorTotalPieces += pieces;
+        });
+
+        // Convert pieces to dozens for single color
+        const additionalDozens = Math.floor(singleColorTotalPieces / 12);
+        const remainingPieces = singleColorTotalPieces % 12;
+        
+        singleColorTotalDozens += additionalDozens;
+        const singleColorDecimal = singleColorTotalDozens + (remainingPieces / 12);
+        
+        // ✅ SIMPLE DISPLAY: Round to 2 decimal
+        const singleColorDisplay = Math.round(singleColorDecimal * 100) / 100;
+        
+        // Multiply by color count
+        const colorCount = item.colors.length;
+        let totalDozensAfterColor = singleColorDecimal * colorCount;
+        
+        // ✅ SIMPLE DISPLAY: Round to 2 decimal
+        totalDozensAllColors = Math.round(totalDozensAfterColor * 100) / 100;
+        totalAmount = totalDozensAllColors * (item.price || 0);
+        
+        // ✅ SIMPLE DISPLAY: With decimal values
+        displayCalculation = `${singleColorDisplay} dozens per color × ${colorCount} colors = ${totalDozensAllColors} dozens`;
+        
+        // ✅ SIMPLE SIZE CHART: Only show sizes with values
+        sizeChartHTML = `
+            <div class="size-chart-simple">
+                ${sizes.map(size => {
+                    const dozens = item[`size${size}`] || 0;
+                    const pieces = item[`size${size}_pieces`] || 0;
+                    
+                    if (dozens === 0 && pieces === 0) return '';
+                    
+                    // ✅ Calculate total for this size with pieces
+                    const totalForSize = dozens + (pieces / 12);
+                    const displayValue = Math.round(totalForSize * 100) / 100;
+                    
+                    return `
+                        <div class="size-item-simple">
+                            <div class="size-label">Size ${size}</div>
+                            <div class="size-value">${displayValue}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        
+    } else if (hasColors) {
+        // ✅ FIXED: DIFFERENT SIZES calculation WITH PIECES
+        item.colors.forEach(color => {
+            let colorTotal = 0;
+            if (color && color.sizes) {
+                sizes.forEach(size => {
+                    const dozens = color.sizes[`size${size}`] || 0;
+                    const pieces = color.sizes[`size${size}_pieces`] || 0;
+                    // ✅ Include pieces in calculation (12 pieces = 1 dozen)
+                    colorTotal += dozens + (pieces / 12);
+                });
+            }
+            totalDozensAllColors += colorTotal;
+        });
+        
+        // ✅ SIMPLE DISPLAY: Round to 2 decimal
+        totalDozensAllColors = Math.round(totalDozensAllColors * 100) / 100;
+        totalAmount = totalDozensAllColors * (item.price || 0);
+        displayCalculation = `${totalDozensAllColors} dozens`;
+        
+        // ✅ FIXED: Different sizes display WITH PIECES
+        const colorSizeTables = item.colors.map(color => {
+            if (!color || !color.sizes) return '';
+            
+            let colorTotal = 0;
+            const sizeItems = sizes.map(size => {
+                const dozens = color.sizes[`size${size}`] || 0;
+                const pieces = color.sizes[`size${size}_pieces`] || 0;
+                // ✅ Calculate total with pieces
+                const totalForSize = dozens + (pieces / 12);
+                const displayValue = Math.round(totalForSize * 100) / 100;
+                colorTotal += totalForSize;
+                
+                return `
+                    <div class="size-item">
+                        <div class="size-label">${size}</div>
+                        <div class="size-value">${displayValue}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            const colorClass = color.name ? `color-${color.name.toLowerCase()}` : '';
+            return `
+                <div class="color-size-table">
+                    <div class="color-header ${colorClass}">
+                        <i class="fas fa-circle" style="color: inherit;"></i>
+                        ${color.name || 'Unknown'} - TOTAL: ${colorTotal.toFixed(2)} DOZENS
+                    </div>
+                    <div class="size-chart">
+                        ${sizeItems}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        sizeChartHTML = `
+            <div class="color-size-tables">
+                ${colorSizeTables}
+            </div>
+        `;
+    } else {
+        totalAmount = 0;
+        displayCalculation = 'No calculation available';
     }
     
     let cardContent = '';
@@ -1781,18 +2239,7 @@ function createInventoryCard(item, index) {
             <div class="calculation-flow">
                 <div class="flow-box">
                     <h4><i class="fas fa-ruler"></i> SIZE QUANTITIES (DOZENS)</h4>
-                    <div class="size-chart">
-                        ${sizes.map(size => `
-                            <div class="size-item">
-                                <div class="size-label">${size}</div>
-                                <div class="size-value">${item[`size${size}`] || 0}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="calculation-step">
-                        <span class="step-label">TOTAL DOZENS (PER COLOR):</span>
-                        <span class="step-value">${sizes.reduce((sum, size) => sum + (item[`size${size}`] || 0), 0)}</span>
-                    </div>
+                    ${sizeChartHTML}
                 </div>
                 
                 <div class="divider">
@@ -1822,45 +2269,22 @@ function createInventoryCard(item, index) {
                     <h4><i class="fas fa-calculator"></i> TOTAL CALCULATION</h4>
                     <div class="calculation-steps">
                         <div class="calculation-step">
-                            <span class="step-label">TOTAL DOZENS (ALL COLORS):</span>
-                            <span class="step-value">${totalDozensAllColors}</span>
+                            <span class="step-label">TOTAL DOZENS:</span>
+                            <span class="step-value">${displayCalculation}</span>
                         </div>
                         <div class="calculation-step">
                             <span class="step-label">PRICE PER DOZEN:</span>
-                            <span class="step-value">₹${item.price}</span>
+                            <span class="step-value">₹${item.price || 0}</span>
+                        </div>
+                        <div class="calculation-step total-amount-step">
+                            <span class="step-label">TOTAL AMOUNT:</span>
+                            <span class="step-value">₹${totalAmount.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
             </div>
         `;
     } else if (hasColors) {
-        const colorSizeTables = item.colors.map(color => {
-            let colorTotal = 0;
-            const sizeItems = sizes.map(size => {
-                const sizeValue = color.sizes[`size${size}`] || 0;
-                colorTotal += sizeValue;
-                return `
-                    <div class="size-item">
-                        <div class="size-label">${size}</div>
-                        <div class="size-value">${sizeValue}</div>
-                    </div>
-                `;
-            }).join('');
-            
-            const colorClass = `color-${color.name.toLowerCase()}`;
-            return `
-                <div class="color-size-table">
-                    <div class="color-header ${colorClass}">
-                        <i class="fas fa-circle" style="color: inherit;"></i>
-                        ${color.name} - TOTAL: ${colorTotal} DOZENS
-                    </div>
-                    <div class="size-chart">
-                        ${sizeItems}
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
         cardContent = `
             <div class="calculation-flow">
                 <div class="flow-box">
@@ -1868,21 +2292,11 @@ function createInventoryCard(item, index) {
                     <div class="color-tags">
                         ${colorTags}
                     </div>
-                    <div class="calculation-step">
-                        <span class="step-label">NUMBER OF COLORS:</span>
-                        <span class="step-value">${item.colors.length}</span>
-                    </div>
                 </div>
                 
                 <div class="flow-box">
                     <h4><i class="fas fa-ruler-combined"></i> SIZE QUANTITIES BY COLOR (DOZENS)</h4>
-                    <div class="color-size-tables">
-                        ${colorSizeTables}
-                    </div>
-                    <div class="calculation-step">
-                        <span class="step-label">TOTAL DOZENS (ALL COLORS):</span>
-                        <span class="step-value">${totalDozensAllColors}</span>
-                    </div>
+                    ${sizeChartHTML}
                 </div>
                 
                 <div class="divider">
@@ -1895,8 +2309,16 @@ function createInventoryCard(item, index) {
                     <h4><i class="fas fa-calculator"></i> TOTAL CALCULATION</h4>
                     <div class="calculation-steps">
                         <div class="calculation-step">
+                            <span class="step-label">TOTAL DOZENS:</span>
+                            <span class="step-value">${totalDozensAllColors}</span>
+                        </div>
+                        <div class="calculation-step">
                             <span class="step-label">PRICE PER DOZEN:</span>
-                            <span class="step-value">₹${item.price}</span>
+                            <span class="step-value">₹${item.price || 0}</span>
+                        </div>
+                        <div class="calculation-step total-amount-step">
+                            <span class="step-label">TOTAL AMOUNT:</span>
+                            <span class="step-value">₹${totalAmount.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
@@ -1916,22 +2338,17 @@ function createInventoryCard(item, index) {
     card.innerHTML = `
     <div class="card-header">
         <div>
-            <!-- QUALITY NAME aur LOT NUMBER EK SAATH -->
-            <h3>${item.quality} (Lot: ${item.lotNumber || 'N/A'})</h3>
-            
-            <!-- DATE aur UNIQUE CODE EK SAATH - ORIGINAL DATE -->
+            <h3>${item.quality || 'N/A'} (Lot: ${item.lotNumber || 'N/A'})</h3>
             <div class="datetime">
                 <strong>${formattedOriginalDate}</strong>
-                <span class="unique-code">Code: ${item.code}</span>
+                <span class="unique-code">Code: ${item.code || 'N/A'}</span>
             </div>
         </div>
         
         <div>
-            <span class="card-badge badge-primary">${item.productType}</span>
+            <span class="card-badge badge-primary">${item.productType || 'N/A'}</span>
             <span class="card-badge badge-secondary">${isSimpleColorFormat ? 'SIMPLE' : 'DETAILED'}</span>
             ${item.cupSize && item.cupSize !== 'N/A' ? `<span class="card-badge" style="background-color: #4cc9f0; color: white;">${item.cupSize} CUP</span>` : ''}
-            
-            <!-- ENTRY TYPE BADGES -->
             ${entryTypeBadge}
         </div>
     </div>
@@ -1944,7 +2361,7 @@ function createInventoryCard(item, index) {
                 <h4><i class="fas fa-info-circle"></i> PRODUCT DETAILS</h4>
                 <div class="detail-item">
                     <span class="detail-label">MATERIAL:</span>
-                    <span class="detail-value">${item.material} M</span>
+                    <span class="detail-value">${item.material || 0} M</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">CUP SIZE:</span>
@@ -1952,7 +2369,7 @@ function createInventoryCard(item, index) {
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">WEIGHT:</span>
-                    <span class="detail-value">${item.weight} KG</span>
+                    <span class="detail-value">${item.weight || 0} KG</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">STATUS:</span>
@@ -1969,14 +2386,13 @@ function createInventoryCard(item, index) {
                 <div class="detail-item">
                     <span class="detail-label">ENTRY DATE:</span>
                     <span class="detail-value">
-                        <i class="fas fa-calendar"></i> ${formattedCurrentDate} <!-- ✅ CURRENT DATE -->
+                        <i class="fas fa-calendar"></i> ${formattedCurrentDate}
                     </span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">NOTES:</span>
                     <span class="detail-value">${item.notes || 'N/A'}</span>
                 </div>
-                
                 ${modifiedHtml}
             </div>
         </div>
@@ -2160,7 +2576,7 @@ function openEditModal(index) {
     document.getElementById('editPrice').value = item.price;
     document.getElementById('editNotes').value = item.notes || '';
     
-    // Load selected colors for editing - FOR BOTH SAME AND DIFFERENT SIZES
+    // Load selected colors for editing
     if (Array.isArray(item.colors)) {
         loadSelectedColorsForEdit(item.colors);
     }
@@ -2168,37 +2584,24 @@ function openEditModal(index) {
     // Get references to size option elements
     const sameSizesOption = document.querySelector('input[name="editSizeOption"][value="same"]');
     const differentSizesOption = document.querySelector('input[name="editSizeOption"][value="different"]');
-    const sameSizesLabel = document.querySelector('label[for="editSameSizes"]');
-    const differentSizesLabel = document.querySelector('label[for="editDifferentSizes"]');
-    
-    // Remove any existing info message
-    const existingMessage = document.getElementById('differentSizesMessage');
-    if (existingMessage) {
-        existingMessage.remove();
-    }
     
     if (item.sizeOption === 'same') {
-        // SAME SIZES ITEM - Allow both options
+        // SAME SIZES ITEM
         if (sameSizesOption) {
             sameSizesOption.checked = true;
-            sameSizesOption.disabled = false;
-            sameSizesOption.title = "";
-        }
-        if (differentSizesOption) {
-            differentSizesOption.disabled = false;
-            differentSizesOption.title = "";
         }
         
-        // Show both labels
-        if (sameSizesLabel) sameSizesLabel.style.display = 'flex';
-        if (differentSizesLabel) differentSizesLabel.style.display = 'flex';
-        
-        // Set size values
+        // Set size values WITH PIECES
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         sizes.forEach(size => {
-            const element = document.getElementById(`editSize${size}`);
-            if (element) {
-                element.value = item[`size${size}`] || 0;
+            const dozenElement = document.getElementById(`editSize${size}`);
+            const piecesElement = document.getElementById(`editSize${size}_pieces`);
+            
+            if (dozenElement) {
+                dozenElement.value = item[`size${size}`] || 0;
+            }
+            if (piecesElement) {
+                piecesElement.value = item[`size${size}_pieces`] || 0;
             }
         });
         
@@ -2206,33 +2609,12 @@ function openEditModal(index) {
         document.getElementById('editDifferentSizesContainer').style.display = 'none';
         
     } else {
-        // DIFFERENT SIZES ITEM - Only allow different sizes, block same sizes
+        // DIFFERENT SIZES ITEM
         if (differentSizesOption) {
             differentSizesOption.checked = true;
-            differentSizesOption.disabled = false;
         }
         
-        // Disable and hide same sizes option
-        if (sameSizesOption) {
-            sameSizesOption.checked = false;
-            sameSizesOption.disabled = true;
-            sameSizesOption.title = "Cannot convert different sizes to same sizes";
-        }
-        if (sameSizesLabel) {
-            sameSizesLabel.style.display = 'none';
-        }
-        
-        // Show info message
-        const sizeOptionsContainer = document.querySelector('.size-options');
-        if (sizeOptionsContainer && !document.getElementById('differentSizesMessage')) {
-            const message = document.createElement('div');
-            message.id = 'differentSizesMessage';
-            message.className = 'info-message';
-            message.innerHTML = '<i class="fas fa-info-circle"></i> This item uses different sizes per color and cannot be converted to same sizes.';
-            sizeOptionsContainer.appendChild(message);
-        }
-        
-        // Populate different sizes container
+        // Populate different sizes container WITH PIECES
         const editColorSizeItems = document.getElementById('editColorSizeItems');
         if (editColorSizeItems) {
             editColorSizeItems.innerHTML = '';
@@ -2244,6 +2626,22 @@ function openEditModal(index) {
                     colorSizeItem.className = 'color-size-item';
                     colorSizeItem.setAttribute('data-color', colorObj.name);
                     
+                    let sizeInputsHTML = '';
+                    [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
+                        const dozenValue = colorObj.sizes[`size${size}`] || 0;
+                        const piecesValue = colorObj.sizes[`size${size}_pieces`] || 0;
+                        
+                        sizeInputsHTML += `
+                            <div class="size-input-group">
+                                <label>Size ${size}</label>
+                                <div class="size-input-row">
+                                    <input type="number" class="edit-color-size-${size}" data-color="${colorObj.name}" value="${dozenValue}" min="0" step="1" placeholder="Dozens">
+                                    <input type="number" class="edit-color-size-${size}_pieces" data-color="${colorObj.name}" value="${piecesValue}" min="0" max="11" step="1" placeholder="Pcs">
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
                     colorSizeItem.innerHTML = `
                         <div class="color-size-header" style="background-color: ${color ? color.backgroundColor : '#f0f0f0'}; color: ${color ? color.textColor : '#333'}; border-color: ${color ? color.borderColor : '#ccc'}">
                             <h4>
@@ -2253,12 +2651,7 @@ function openEditModal(index) {
                             <button type="button" class="remove-color-btn" onclick="removeEditColorSizeItem(this)">Remove</button>
                         </div>
                         <div class="size-grid">
-                            ${[28, 30, 32, 34, 36, 38, 40, 42, 44, 46].map(size => `
-                                <div class="size-input-group">
-                                    <label>Size ${size}</label>
-                                    <input type="number" class="edit-color-size-${size}" data-color="${colorObj.name}" value="${colorObj.sizes[`size${size}`] || 0}" min="0" step="1" placeholder="Dozens">
-                                </div>
-                            `).join('')}
+                            ${sizeInputsHTML}
                         </div>
                     `;
                     editColorSizeItems.appendChild(colorSizeItem);
@@ -2270,34 +2663,13 @@ function openEditModal(index) {
         document.getElementById('editDifferentSizesContainer').style.display = 'block';
     }
     
-    // Re-attach event listeners with restricted conversion logic
+    // Re-attach event listeners
     const newEditSizeOptionRadios = document.querySelectorAll('input[name="editSizeOption"]');
     newEditSizeOptionRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            // Allow same → different conversion
-            if (this.value === 'different' && item.sizeOption === 'same') {
-                convertSameToDifferentSizes(item);
-                toggleEditSizeOption();
-            }
-            // Block different → same conversion
-            else if (this.value === 'same' && item.sizeOption === 'different') {
-                showNotification('Cannot convert different sizes to same sizes. Please keep as different sizes.', 'error');
-                
-                // Revert to different sizes option
-                const differentSizesOption = document.querySelector('input[name="editSizeOption"][value="different"]');
-                if (differentSizesOption) {
-                    differentSizesOption.checked = true;
-                }
-                return;
-            }
-            else {
-                toggleEditSizeOption();
-            }
-        });
+        radio.addEventListener('change', toggleEditSizeOption);
     });
     
     toggleEditSizeOption();
-    
     editModal.style.display = 'flex';
 }
 
@@ -2397,13 +2769,8 @@ function updateItem(e) {
     const notes = document.getElementById('editNotes').value;
     
     // Validation
-    if (!productType) {
-        showNotification('Product Type is required', 'error');
-        return;
-    }
-    
-    if (!quality) {
-        showNotification('Quality Name is required', 'error');
+    if (!productType || !quality) {
+        showNotification('Product Type and Quality are required', 'error');
         return;
     }
     
@@ -2426,21 +2793,34 @@ function updateItem(e) {
         
         colors = editSelectedColors.map(color => color.toUpperCase());
         
-        // Get size values
-        const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
+        // Calculate total with pieces
+        const totalCalculation = calculateTotalWithPieces(true);
+        const colorCount = colors.length;
         
-        // ✅ CORRECTED: COLOR SE MULTIPLY NAHI KARNA
+        // Multiply by color count
+        let totalDozensAfterColor = totalCalculation.dozens * colorCount;
+        let totalPiecesAfterColor = totalCalculation.pieces * colorCount;
+        
+        // Convert pieces to dozens
+        const additionalDozensFromPieces = Math.floor(totalPiecesAfterColor / 12);
+        const remainingPiecesAfterColor = totalPiecesAfterColor % 12;
+        
+        totalDozensAfterColor += additionalDozensFromPieces;
+        totalDozens = totalDozensAfterColor + (remainingPiecesAfterColor / 12);
+        
+        // Store size data with pieces
+        const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         sizes.forEach(size => {
-            const element = document.getElementById(`editSize${size}`);
-            if (element) {
-                const sizeValue = parseInt(element.value) || 0;
-                sizeData[`size${size}`] = sizeValue;
-                totalDozens += sizeValue; // ✅ DIRECT TOTAL MEIN ADD KARO (COLOR MULTIPLY NAHI)
+            const dozenElement = document.getElementById(`editSize${size}`);
+            const piecesElement = document.getElementById(`editSize${size}_pieces`);
+            if (dozenElement && piecesElement) {
+                sizeData[`size${size}`] = parseInt(dozenElement.value) || 0;
+                sizeData[`size${size}_pieces`] = parseInt(piecesElement.value) || 0;
             }
         });
         
     } else {
-        // DIFFERENT SIZES - Use color size items
+        // ✅ FIXED: DIFFERENT SIZES - Use color size items WITH PIECES
         const editColorSizeItems = document.getElementById('editColorSizeItems');
         if (!editColorSizeItems || editColorSizeItems.children.length === 0) {
             showNotification('Please add at least one color with sizes', 'error');
@@ -2451,7 +2831,7 @@ function updateItem(e) {
         let allColorsValid = true;
         let hasAtLeastOneColor = false;
         
-        // Process each color size item
+        // Process each color size item WITH PIECES
         for (let i = 0; i < editColorSizeItems.children.length; i++) {
             const colorItem = editColorSizeItems.children[i];
             const colorName = colorItem.getAttribute('data-color');
@@ -2461,14 +2841,22 @@ function updateItem(e) {
                 let colorTotal = 0;
                 let hasSizeData = false;
                 
-                // Get sizes for this color
+                // ✅ FIXED: Get sizes for this color WITH PIECES
                 [28, 30, 32, 34, 36, 38, 40, 42, 44, 46].forEach(size => {
-                    const sizeInput = colorItem.querySelector(`.edit-color-size-${size}`);
-                    if (sizeInput) {
-                        const sizeValue = parseInt(sizeInput.value) || 0;
-                        colorSizes[`size${size}`] = sizeValue;
-                        colorTotal += sizeValue;
-                        if (sizeValue > 0) hasSizeData = true;
+                    const dozenInput = colorItem.querySelector(`.edit-color-size-${size}`);
+                    const piecesInput = colorItem.querySelector(`.edit-color-size-${size}_pieces`);
+                    
+                    // ✅ FIX: Ensure both inputs exist
+                    if (dozenInput && piecesInput) {
+                        const dozenValue = parseInt(dozenInput.value) || 0;
+                        const piecesValue = parseInt(piecesInput.value) || 0;
+                        
+                        colorSizes[`size${size}`] = dozenValue;
+                        colorSizes[`size${size}_pieces`] = piecesValue;
+                        
+                        // Calculate total for this color
+                        colorTotal += dozenValue + (piecesValue / 12);
+                        if (dozenValue > 0 || piecesValue > 0) hasSizeData = true;
                     }
                 });
                 
@@ -2501,7 +2889,7 @@ function updateItem(e) {
     }
     
     // Calculate totals
-    const totalPieces = calculateTotalPieces(totalDozens);
+    const totalPieces = totalDozens * 12;
     const totalAmount = calculateTotalAmount(totalDozens, price);
     
     // Update item properties
@@ -2527,6 +2915,7 @@ function updateItem(e) {
         const sizes = [28, 30, 32, 34, 36, 38, 40, 42, 44, 46];
         sizes.forEach(size => {
             delete item[`size${size}`];
+            delete item[`size${size}_pieces`];
         });
     }
     
@@ -2803,8 +3192,72 @@ function searchWithIndexes(searchTerm) {
     return Array.from(resultIndices).map(idx => inventoryItems[idx]);
 }
 
+
+
+function debugInventoryItems() {
+    console.log("🐛 === DEBUG INVENTORY ITEMS ===");
+    console.log("Total items:", inventoryItems.length);
+    
+    if (inventoryItems.length > 0) {
+        console.log("First item (latest):", inventoryItems[0]);
+        const piecesInFirst = Object.keys(inventoryItems[0]).filter(key => key.includes('_pieces'));
+        console.log(`Pieces in first item: ${piecesInFirst.length}`);
+    }
+}
+
+
+
 function afterDataModification() {
+    console.log("💾 Saving to localStorage...");
+    
+    // ✅ DEBUG: Check what we're about to save
+    console.log("🔍 BEFORE SAVE - Inventory items:", inventoryItems.length);
+    if (inventoryItems.length > 0) {
+        const latestItem = inventoryItems[0];
+        console.log("📦 Latest item before save:", latestItem);
+        
+        // Check pieces in latest item
+        if (latestItem.colors && latestItem.colors.length > 0) {
+            latestItem.colors.forEach((color, index) => {
+                if (color.sizes) {
+                    const piecesProps = Object.keys(color.sizes).filter(key => key.includes('_pieces'));
+                    console.log(`🎨 Color ${color.name} pieces before save: ${piecesProps.length}`);
+                    piecesProps.forEach(prop => {
+                        console.log(`   ${prop}: ${color.sizes[prop]}`);
+                    });
+                }
+            });
+        }
+    }
+    
+    // Save to localStorage
     localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+    
+    // ✅ DEBUG: Check what was actually saved
+    const stored = localStorage.getItem('inventoryItems');
+    if (stored) {
+        const items = JSON.parse(stored);
+        console.log(`💾 Stored ${items.length} items in localStorage`);
+        
+        if (items.length > 0) {
+            const latestStoredItem = items[0];
+            console.log("📦 Latest stored item:", latestStoredItem);
+            
+            // Check pieces in stored item
+            if (latestStoredItem.colors && latestStoredItem.colors.length > 0) {
+                latestStoredItem.colors.forEach((color, index) => {
+                    if (color.sizes) {
+                        const piecesProps = Object.keys(color.sizes).filter(key => key.includes('_pieces'));
+                        console.log(`🎨 Color ${color.name} pieces after save: ${piecesProps.length}`);
+                        piecesProps.forEach(prop => {
+                            console.log(`   ${prop}: ${color.sizes[prop]}`);
+                        });
+                    }
+                });
+            }
+        }
+    }
+    
     buildSearchIndexes();
     displayPaginatedItems();
     updateStats();
