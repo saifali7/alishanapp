@@ -21,6 +21,7 @@
       "KIARA-MOLD",
       "DIXCY-MOLD",
       "KOMAL-MOLD",
+      "ROSE-MOLD",
       "DENIM-MOLD"
     ],
     "PAD QUALITIES": [
@@ -38,6 +39,7 @@
       "CHHAYA-COTTON",
       "JANVI-COTTON",
       "MEERA-COTTON",
+      "KAVITA-COTTON",
       "C-CUP COTTON"
     ],
     "OTHER QUALITIES": [
@@ -74,6 +76,7 @@
   "blouse": {
     "BLOUSE QUALITIES": [
       "ORRY-BLOUSE",
+      "CORFIT-BLOUSE",
       "MERRYKOM-BLOUSE"
     ]
   }
